@@ -1,74 +1,67 @@
 namespace Gap_Controlled_Simplex;
 
-public class PrimalSimplex
+public class PrimalSimplex : ISimplex
 {
-    public static Vertex? Minimize(Problem p, int[]? StartBasis = null)
+    public static Vertex? Iteration(Vertex v)
     {
-        var invertedProblem = new Problem(
-            p.c * -1,
-            p.A,
-            p.b
-        );
+        if (!v.IsPrimalFeasible)
+            return null;
 
-        var result = Maximize(invertedProblem, StartBasis);
-        if (result is null)
-            return result;
+        // A_N*x has 0 component => degenerate point
 
-        // Change reference problem back to original
-        result.Problem = p;
-        return result;
+        if (v.IsOptimalPoint) // y_b >= 0
+        {
+            // Optimal value
+            return v;
+        }
+
+        var h = v.Basis.First(i => v.y[i] < 0.0);
+
+        // Wh is the h-th column of -A_b_inv
+        var Wh = (-1) * 
+            v.A_B
+            .Inverse()
+            .Column(v.Basis.IndexOf(h));
+
+        // Entering index
+        int k = int.MaxValue;
+        double t = double.PositiveInfinity;
+        foreach (int i in v.NonBasis.Where(i => v.A.Row(i) * Wh > 0.0))
+        {
+            var t_i = (v.b[i] - v.A.Row(i) * v.x) / (v.A.Row(i) * Wh);
+            
+            if (t_i < t)
+            {
+                t = t_i;
+                k = i;
+            }
+        }
+
+        if (k == int.MaxValue)
+        {
+            // Unbounded problem
+            return null;
+        }
+
+        var newBasis = v.Basis
+            .Where(i => i != h)
+            .Append(k);
+        return new Vertex(v.Problem, newBasis);
     }
 
-    public static Vertex? Maximize(Problem p, int[]? StartBasis = null)
+    public Vertex? Maximize(Problem p, int[]? StartBasis = null)
     {
         StartBasis ??= [];
-        Vertex current = new(p, StartBasis);
 
-        while (true)
-        {
-            if (!current.IsPrimalFeasible)
-                return null;
-
-            // A_N*x has 0 component => degenerate point
-
-            if (current.IsOptimalPoint) // y_b >= 0
-            {
-                // Optimal value
+        for (Vertex? current = new(p, StartBasis); 
+            current is not null; 
+            current = Iteration(current)
+        ) {
+            if (current.IsOptimalPoint)
                 return current;
-            }
-
-            var h = current.Basis.First(i => current.y[i] < 0.0);
-
-            // Wh is the h-th column of -A_b_inv
-            var Wh = (-1) * current
-                .activeConstraintsMatrix()
-                .Inverse()
-                .Column(current.Basis.IndexOf(h));
-
-            // Entering index
-            int k = int.MaxValue;
-            double t = double.PositiveInfinity;
-            foreach (int i in current.NonBasis.Where(i => p.A.Row(i) * Wh > 0.0))
-            {
-                var t_i = (p.b[i] - p.A.Row(i) * current.x) / (p.A.Row(i) * Wh);
-                
-                if (t_i < t)
-                {
-                    t = t_i;
-                    k = i;
-                }
-            }
-
-            if (k == int.MaxValue)
-            {
-                // Unbounded problem
-                return null;
-            }
-
-            var newBasis = current.Basis
-                .Where(i => i != h)
-                .Append(k);
-            current = new Vertex(p, newBasis);
         }
+
+        // Unsolvable or unbounded problem
+        return null;
     }
 }

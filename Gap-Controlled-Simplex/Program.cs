@@ -11,14 +11,27 @@ var b = new double[] { 2, 3, 0, 0 };
 
 var problem = new Problem(c, A, b);
 
-var solution = DualSimplex.Maximize(problem);
-
-if (solution is null)
-    Console.WriteLine("null");
-else
+void solveAndPrint(ISimplex solver, int[]? B = null)
 {
-    Console.WriteLine($"c*x = {solution.PrimalValue}");
+    var solution = solver.Maximize(problem, B);
+
+    if (solution is null)
+    {
+        Console.WriteLine("Problem is unbounded or infeasible");
+        return;
+    }
+
     Console.WriteLine($"x = [{string.Join("; ", solution.x)}]");
     Console.WriteLine($"y = [{string.Join("; ", solution.y)}]");
-    Console.WriteLine($"gap = {solution.Gap}");
+    Console.WriteLine($"c^T * x = {solution.PrimalValue}");
+    Console.WriteLine($"y^T * b = {solution.DualValue}");
+    Console.WriteLine($"gap = |V(D) - V(P)| = {solution.Gap}");
 }
+
+Console.WriteLine("=== Primal Simplex ===");
+solveAndPrint(new PrimalSimplex(), B: [0, 1]);
+Console.WriteLine();
+Console.WriteLine();
+
+Console.WriteLine("=== Dual Simplex ===");
+solveAndPrint(new DualSimplex());

@@ -38,14 +38,10 @@ public class Problem
         this.b = b;
 
         if (c.Count != A.ColumnCount)
-        {
             throw new InvalidParameterException();
-        }
 
         if (A.RowCount != b.Count)
-        {
             throw new InvalidParameterException();
-        }
     }
 
     public Problem(double[] c, double[,] A, double[] b) :

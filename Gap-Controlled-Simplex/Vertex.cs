@@ -1,10 +1,11 @@
+using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 
 namespace Gap_Controlled_Simplex;
 
 public class Vertex
 {
-    public Problem Problem;
+    public readonly Problem Problem;
 
     public readonly int[] Basis;
 
@@ -12,13 +13,17 @@ public class Vertex
 
     public readonly Vector<double> y;
 
+    public readonly Matrix<double> A_B;
+
+    public readonly Vector<double> b_B;
+
     public Vertex(Problem p, IEnumerable<int> B)
     {
         Problem = p;
         Basis = B.OrderBy(i => i).ToArray();
 
-        var A_B = activeConstraintsMatrix();
-        var b_B = activeConstraintsVector();
+        A_B = getA_B(A, Basis);
+        b_B = getb_B(b, Basis);
 
         x = A_B.Inverse() * b_B;
 
@@ -30,22 +35,33 @@ public class Vertex
             y[Basis[i]] = yb[i];
     }
 
-    public Matrix<double> activeConstraintsMatrix()
-    {
-        var A_B = Matrix<double>.Build.Dense(Problem.Dimension, Problem.Dimension, 0);
+    public Matrix<double> A { get => Problem.A; }
 
-        for (int i = 0; i < Problem.Dimension; i++)
-            A_B.SetRow(i, Problem.A.Row(Basis[i]));
+    public Vector<double> b { get => Problem.b; }
+
+    private static Matrix<double> getA_B(Matrix<double> A, int[] Basis)
+    {
+        int n = A.ColumnCount;
+
+        if (n != Basis.Length)
+            throw new InvalidParameterException();
+
+        var A_B = Matrix<double>.Build.Dense(n, n, 0);
+
+        for (int i = 0; i < n; i++)
+            A_B.SetRow(i, A.Row(Basis[i]));
 
         return A_B;
     }
 
-    public Vector<double> activeConstraintsVector()
+    private static Vector<double> getb_B(Vector<double> b, int[] Basis)
     {
-        var b_B = Vector<double>.Build.Dense(Problem.Dimension, 0);
+        int n = Basis.Length;
 
-        for (int i = 0; i < Problem.Dimension; i++)
-            b_B[i] = Problem.b[Basis[i]];
+        var b_B = Vector<double>.Build.Dense(n, 0);
+
+        for (int i = 0; i < n; i++)
+            b_B[i] = b[Basis[i]];
 
         return b_B;
     }
