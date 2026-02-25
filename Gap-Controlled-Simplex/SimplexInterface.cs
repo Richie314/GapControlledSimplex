@@ -18,4 +18,5 @@ public interface ISimplex
         return new Vertex(p, result.Basis);
     }
     public Vertex? Maximize(Problem p, int[]? StartBasis = null);
+    public Vertex? GetFeasibleVertex(Problem p);
 }

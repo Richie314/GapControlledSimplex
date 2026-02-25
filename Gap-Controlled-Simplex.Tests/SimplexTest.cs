@@ -109,7 +109,10 @@ public class SimplexTest
         params double[][] Ab
     ) {
         var solver = new PrimalSimplex();
+
+        // Test both with and without starting feasible basis
         DoTest(solver, expected, B, c, Ab);
+        DoTest(solver, expected, null, c, Ab);
     }
 
     

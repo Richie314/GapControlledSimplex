@@ -100,10 +100,8 @@ public class Vertex
         return maxViolation <= absTol + relTol * scale;
     }
 
-    public Vector<double> dualResiduals()
-    {
-        return Problem.c - Problem.A.TransposeThisAndMultiply(y);
-    }
+    public Vector<double> dualResiduals() =>
+        Problem.c - Problem.A.TransposeThisAndMultiply(y);
 
     public bool IsPrimalFeasible
     {

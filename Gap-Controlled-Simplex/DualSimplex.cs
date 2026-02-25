@@ -54,11 +54,10 @@ public class DualSimplex : ISimplex
 
     public Vertex? Maximize(Problem p, int[]? StartBasis = null)
     {
-
         Vertex? current = 
             StartBasis is not null ? 
             new(p, StartBasis) : 
-            getStartingBasis(p);
+            GetFeasibleVertex(p);
 
         for (; current is not null; current = Iteration(current))
         {
@@ -69,7 +68,7 @@ public class DualSimplex : ISimplex
         return null;
     }
 
-    private static Vertex getStartingBasis(Problem p)
+    public Vertex? GetFeasibleVertex(Problem p)
     {
         Vertex v = new(p, Enumerable.Range(0, p.Dimension));
 

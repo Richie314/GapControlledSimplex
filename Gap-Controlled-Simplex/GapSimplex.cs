@@ -7,6 +7,37 @@ public class GapSimplex : ISimplex
         throw new NotImplementedException();
     }
 
+    public Vertex? GetFeasibleVertex(Problem p) =>
+        new PrimalSimplex().GetFeasibleVertex(p);
+
+    private static Vertex? makePrimalFeasible(Problem p, Vertex v)
+    {
+        while (!v.IsPrimalFeasible)
+        {
+            // Calculate primal residuals
+            var rp = v.primalResiduals();
+
+            // Leaving index: remove the "most primal-infeasible" index from the basis
+            int h = v.Basis.MaxBy(i => Math.Abs(rp[i]));
+
+            // Entering index
+            int k = -1;
+            double t = 0;
+            foreach (int j in v.NonBasis)
+            {
+                
+            }
+
+            var newBasis = v.Basis
+                .Where(i => i != h)
+                .Append(k);
+
+            v = new Vertex(p, newBasis);
+        }
+
+        return v;
+    }
+
     private static Vertex? makeDualFeasible(Problem p, Vertex v)
     {
         while (!v.IsDualFeasible)
@@ -49,13 +80,4 @@ public class GapSimplex : ISimplex
 
         return v;
     } 
-
-    private static Vertex makePrimalFeasible(Problem p, Vertex v)
-    {
-        while (!v.IsPrimalFeasible)
-        {
-        }
-
-        return v;
-    }
 }
