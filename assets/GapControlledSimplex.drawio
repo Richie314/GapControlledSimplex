@@ -1,0 +1,91 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" version="29.5.2">
+  <diagram name="State Diagram" id="_PSq95Kuain-giZnNaEP">
+    <mxGraphModel dx="854" dy="528" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-1" parent="1" style="shape=ellipse;html=1;dashed=0;whiteSpace=wrap;aspect=fixed;perimeter=ellipsePerimeter;" value="Primal feasible" vertex="1">
+          <mxGeometry height="60" width="60" x="110" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-2" parent="1" style="shape=ellipse;html=1;dashed=0;whiteSpace=wrap;aspect=fixed;perimeter=ellipsePerimeter;" value="Dual feasible" vertex="1">
+          <mxGeometry height="60" width="60" x="429" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-3" parent="1" style="html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.start" value="Start" vertex="1">
+          <mxGeometry height="30" width="80" x="100" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-4" edge="1" parent="1" source="VnYJloIEKelt8EC-Y6g_-3" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=15;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="VnYJloIEKelt8EC-Y6g_-1" value="solve primal&lt;div&gt;auxiliary problem&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="390" y="300" as="sourcePoint" />
+            <mxPoint x="440" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-5" parent="1" style="html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.start" value="End" vertex="1">
+          <mxGeometry height="30" width="80" x="100" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-6" edge="1" parent="1" source="VnYJloIEKelt8EC-Y6g_-1" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=-15;entryPerimeter=0;" target="VnYJloIEKelt8EC-Y6g_-5" value="is optimal or gap &amp;lt; t">
+          <mxGeometry height="50" relative="1" width="50" x="0.25" y="20" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="150" y="270" as="sourcePoint" />
+            <mxPoint x="150" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-7" edge="1" parent="1" source="VnYJloIEKelt8EC-Y6g_-2" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=-15;entryPerimeter=0;" target="VnYJloIEKelt8EC-Y6g_-5" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="459" y="360" />
+              <mxPoint x="140" y="360" />
+            </Array>
+            <mxPoint x="415" y="360" as="sourcePoint" />
+            <mxPoint x="465" y="310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-8" edge="1" parent="1" source="VnYJloIEKelt8EC-Y6g_-2" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=1;entryDx=0;entryDy=0;" target="VnYJloIEKelt8EC-Y6g_-2" value="dual-simplex&lt;div&gt;iteration&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" y="-39" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="579" y="160" />
+              <mxPoint x="579" y="220" />
+              <mxPoint x="579" y="280" />
+            </Array>
+            <mxPoint x="409" y="300" as="sourcePoint" />
+            <mxPoint x="549" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-9" edge="1" parent="1" source="VnYJloIEKelt8EC-Y6g_-1" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=1;entryDx=0;entryDy=0;" target="VnYJloIEKelt8EC-Y6g_-1" value="primal-simplex&lt;div&gt;iteration&lt;/div&gt;">
+          <mxGeometry height="50" relative="1" width="50" y="30" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="40" y="160" />
+              <mxPoint x="40" y="220" />
+              <mxPoint x="40" y="280" />
+            </Array>
+            <mxPoint y="320" as="sourcePoint" />
+            <mxPoint x="40" y="300" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-10" edge="1" parent="1" source="VnYJloIEKelt8EC-Y6g_-1" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=0;entryDy=0;" target="VnYJloIEKelt8EC-Y6g_-2" value="make dual-feasible">
+          <mxGeometry height="50" relative="1" width="50" x="0.0023" y="10" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="200" y="160" />
+              <mxPoint x="400" y="160" />
+            </Array>
+            <mxPoint x="310" y="300" as="sourcePoint" />
+            <mxPoint x="360" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="VnYJloIEKelt8EC-Y6g_-11" edge="1" parent="1" source="VnYJloIEKelt8EC-Y6g_-2" style="endArrow=classic;html=1;rounded=0;entryX=1;entryY=1;entryDx=0;entryDy=0;exitX=0;exitY=1;exitDx=0;exitDy=0;" target="VnYJloIEKelt8EC-Y6g_-1" value="make primal-feasible">
+          <mxGeometry height="50" relative="1" width="50" x="-0.0023" y="-10" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="400" y="280" />
+              <mxPoint x="200" y="280" />
+            </Array>
+            <mxPoint x="310" y="300" as="sourcePoint" />
+            <mxPoint x="360" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
