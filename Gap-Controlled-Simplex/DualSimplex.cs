@@ -18,15 +18,13 @@ public class DualSimplex : ISimplex
         // Entering index
         int k = v.NonBasis.First(i => v.b[i] < v.A.Row(i) * v.x);
         var Ak = v.A.Row(k);
-
-        var W = (-1) * v.A_B.Inverse();
         
         // Leaving index
         int h = int.MaxValue;
         double t = double.PositiveInfinity;
         foreach (int i in v.Basis)
         {
-            var Ak_Wi = Ak * W.Column(v.Basis.IndexOf(i));
+            var Ak_Wi = Ak * v.W.Column(v.Basis.IndexOf(i));
             if (Ak_Wi >= 0.0)
                 continue;
 
@@ -78,7 +76,7 @@ public class DualSimplex : ISimplex
             // Direzione dual simplex
             // Wh = h-th column of -A_B^{-1}
             int h = v.Basis.First(i => v.y[i] < 0.0);
-            var Wh = -v.A_B.Inverse().Column(v.Basis.IndexOf(h));
+            var Wh = v.W.Column(v.Basis.IndexOf(h));
 
             // Ratio test duale
             int entering = -1;

@@ -1,15 +1,11 @@
 ﻿using Gap_Controlled_Simplex;
 
-var c = new double[] { 2, 1 };
-var A = new double[,] {
-    {  1,  0 },
-    {  1,  1 },
-    { -1.0,  0.0 },
-    {  0.0, -1.0 },
-};
-var b = new double[] { 2, 3, 0, 0 };
-
-var problem = new Problem(c, A, b);
+var problem = new Problem(
+    [ 4.0,  5.0,  2.0], 
+    [ 0.0,  0.6,  0.8, 500.0],
+    [-1.0,  2.0,  0.0,   0.0],
+    [ 1.0,  0.0, -1.0,   0.0]
+).EnforcePositivity();
 
 void solveAndPrint(ISimplex solver, int[]? B = null)
 {
@@ -35,10 +31,17 @@ void solveAndPrint(ISimplex solver, int[]? B = null)
         Console.WriteLine($"y^T * b = {solution.DualValue}");
 }
 
+
 Console.WriteLine("=== Primal Simplex ===");
-solveAndPrint(new PrimalSimplex(), B: [0, 1]);
+solveAndPrint(new PrimalSimplex(), B: [0, 3, 4]);
 Console.WriteLine();
 Console.WriteLine();
 
 Console.WriteLine("=== Dual Simplex ===");
 solveAndPrint(new DualSimplex());
+Console.WriteLine();
+Console.WriteLine();
+
+
+Console.WriteLine("=== Gap-Controlled Simplex ===");
+solveAndPrint(new GapSimplex(), B: [0, 3, 4]);

@@ -51,15 +51,22 @@ public class Problem
             Vector<double>.Build.DenseOfArray(b)
         ) { }
 
+    public Problem(double[] c, params double[][] Ab) :
+        this(
+            Vector<double>.Build.DenseOfArray(c),
+            Matrix<double>.Build.DenseOfRows(Ab.Select(row => row.Take(row.Length - 1))),
+            Vector<double>.Build.DenseOfArray(Ab.Select(row => row.Last()).ToArray())
+        ) { }
+
     public Problem EnforcePositivity()
     {
-        var I = -1 * Matrix<double>.Build.DenseIdentity(Dimension, Dimension);
+        var I = Matrix<double>.Build.DenseIdentity(Dimension);
         var newB = Vector<double>.Build.Dense(Constraints + Dimension, 0.0);
         newB.SetSubVector(0, Constraints, b);
         
         return new Problem(
             c, 
-            A.Stack(I), 
+            A.Stack(-1.0 * I), 
             newB
         );
     }
