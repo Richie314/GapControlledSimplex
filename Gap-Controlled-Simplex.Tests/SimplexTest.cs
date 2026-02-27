@@ -24,8 +24,7 @@ public class SimplexTest
         var result = solver.Maximize(p, B);
         Assert.NotNull(result);
 
-        Assert.True(result.IsOptimalPoint, "Returned value not recognized as optimal");
-        Assert.Equal(0.0, result.Gap, 1.0e-9);
+        Assert.True(result.IsOptimalPoint(), "Returned value not recognized as optimal");
 
         var expectedValue = p.Eval(expected);
         Assert.Equal(0.0, (result.PrimalValue - expectedValue) / expectedValue, 5.0e-3);

@@ -6,12 +6,12 @@ public class PrimalSimplex : ISimplex
 {
     public static Vertex? Iteration(Vertex v)
     {
-        if (!v.IsPrimalFeasible)
+        if (!v.IsPrimalFeasible())
             return null;
 
         // A_N*x has 0 component => degenerate point
 
-        if (v.IsOptimalPoint) // y_b >= 0
+        if (v.IsDualFeasible()) // y_b >= 0
         {
             // Optimal value
             return v;
@@ -60,7 +60,7 @@ public class PrimalSimplex : ISimplex
 
         for (; current is not null; current = Iteration(current))
         {
-            if (current.IsOptimalPoint)
+            if (current.IsOptimalPoint())
                 return current;
         }
 
@@ -73,7 +73,7 @@ public class PrimalSimplex : ISimplex
         var initialRandomBasis = Enumerable.Range(0, p.Dimension).ToArray();
         var initialVertex = new Vertex(p, initialRandomBasis);
 
-        if (initialVertex.IsPrimalFeasible)
+        if (initialVertex.IsPrimalFeasible())
             return initialVertex;
 
         // Create the auxiliary problem and solve it for a feasible vertex
@@ -136,13 +136,13 @@ public class PrimalSimplex : ISimplex
             initialVertex.Basis.Concat(V).ToArray()
         );
         if (auxSolution is null || 
-            !auxSolution.IsOptimalPoint || 
+            !auxSolution.IsOptimalPoint() || 
             auxSolution.PrimalValue < 0.0
         ) // Check if the simplex failed for the aux problem
             return null;
 
         var newVertex = new Vertex(p, auxSolution.Basis.Take(p.Dimension).ToArray());
-        if (!newVertex.IsPrimalFeasible)
+        if (!newVertex.IsPrimalFeasible())
             throw new DataMisalignedException(
                 "The auxiliary problem should have returned a primal feasible vertex " +
                 "for the original problem"

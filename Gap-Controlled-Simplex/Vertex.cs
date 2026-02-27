@@ -17,6 +17,11 @@ public class Vertex
 
     public readonly Vector<double> b_B;
 
+    /// <summary>
+    /// W = - A_B^-1
+    /// </summary>
+    public readonly Matrix<double> W;
+
     public Vertex(Problem p, IEnumerable<int> B)
     {
         Problem = p;
@@ -25,12 +30,17 @@ public class Vertex
         A_B = getA_B(A, Basis);
         b_B = getb_B(b, Basis);
 
-        x = A_B.Inverse() * b_B;
+        W = -A_B.Inverse();
+
+        // A_B x = b_B
+        x = A_B.Solve(b_B); // x = -W * b_B;
 
         y = Vector<double>.Build.Dense(p.Constraints, 0);
 
         // y_B = c^T A_B^-1
-        var yb = Problem.c * A_B.Inverse();
+        // y_B A_B = c^T
+        // var yb = Problem.c * A_B.Inverse();
+        var yb = A_B.Transpose().Solve(Problem.c);
         for (int i = 0; i < Basis.Length; i++)
             y[Basis[i]] = yb[i];
     }
@@ -81,16 +91,20 @@ public class Vertex
         return r;
     }
 
-    private bool checkPrimalFeasibility(double absTol = 1e-10, double relTol = 1e-9)
-    {
+    public bool IsPrimalFeasible(
+        double absTol = 1e-10, 
+        double relTol = 1e-9
+    ) {
         double maxViolation = Math.Abs(primalResiduals().AbsoluteMaximum());
         double scale = Problem.b.AbsoluteMaximum();
 
         return maxViolation <= absTol + relTol * scale;
     }
 
-    private bool checkDualFeasibility(double absTol = 1e-10, double relTol = 1e-9)
-    {
+    public bool IsDualFeasible(
+        double absTol = 1e-10, 
+        double relTol = 1e-9
+    ) {
         if (!y.All(y_i => y_i >= 0.0))
             return false;
 
@@ -103,36 +117,32 @@ public class Vertex
     public Vector<double> dualResiduals() =>
         Problem.c - Problem.A.TransposeThisAndMultiply(y);
 
-    public bool IsPrimalFeasible
+    public bool IsOptimalPoint(
+        double absTol = 1e-10, 
+        double relTol = 1e-9
+    ) => 
+        IsPrimalFeasible(absTol, relTol) && IsDualFeasible(absTol, relTol);
+
+
+    private double calculatePrimalValue()
     {
-        get => checkPrimalFeasibility();
+        if (!IsPrimalFeasible())
+            throw new InvalidOperationException("Vertex is not primal feasible.");
+        return Problem.Eval(x);
     }
-    public bool IsDualFeasible
-    {
-        get => checkDualFeasibility();
-    }
-
-    public bool IsOptimalPoint
-    {
-        get => IsPrimalFeasible && IsDualFeasible;
-    }
-
-
-
-
     public double PrimalValue
     {
-        get => Problem.Eval(x);
+        get => calculatePrimalValue();
     }
 
+    private double calculateDualValue()
+    {
+        if (!IsDualFeasible())
+            throw new InvalidOperationException("Vertex is not dual feasible.");
+        return Problem.b * y;
+    }
     public double DualValue
     {
-        get => Problem.b * y;
+        get => calculateDualValue();
     }
-
-    public double Gap
-    {
-        get => Math.Abs(DualValue - PrimalValue);
-    }
-
 }

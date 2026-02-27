@@ -6,10 +6,10 @@ public class DualSimplex : ISimplex
 {
     public static Vertex? Iteration(Vertex v)
     {
-        if (!v.IsDualFeasible)
+        if (!v.IsDualFeasible())
             return null;
         
-        if (v.IsOptimalPoint) // Ax <= b
+        if (v.IsPrimalFeasible()) // Ax <= b
         {
             // Optimal value
             return v;
@@ -61,7 +61,7 @@ public class DualSimplex : ISimplex
 
         for (; current is not null; current = Iteration(current))
         {
-            if (current.IsOptimalPoint)
+            if (current.IsOptimalPoint())
                 return current;
         }
 
@@ -72,7 +72,7 @@ public class DualSimplex : ISimplex
     {
         Vertex v = new(p, Enumerable.Range(0, p.Dimension));
 
-        while (!v.IsDualFeasible)
+        while (!v.IsDualFeasible())
         {
 
             // Direzione dual simplex

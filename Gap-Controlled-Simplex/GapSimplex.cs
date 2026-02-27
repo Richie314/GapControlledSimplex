@@ -12,7 +12,7 @@ public class GapSimplex : ISimplex
 
     private static Vertex? makePrimalFeasible(Problem p, Vertex v)
     {
-        while (!v.IsPrimalFeasible)
+        while (!v.IsPrimalFeasible())
         {
             // Calculate primal residuals
             var rp = v.primalResiduals();
@@ -40,7 +40,7 @@ public class GapSimplex : ISimplex
 
     private static Vertex? makeDualFeasible(Problem p, Vertex v)
     {
-        while (!v.IsDualFeasible)
+        while (!v.IsDualFeasible())
         {
             // Dual residuals c^T - y^T A
             var rc = v.dualResiduals();

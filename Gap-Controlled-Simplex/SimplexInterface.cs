@@ -11,7 +11,7 @@ public interface ISimplex
         );
 
         var result = Maximize(invertedProblem, StartBasis);
-        if (result is null || !result.IsOptimalPoint)
+        if (result is null || !result.IsOptimalPoint())
             return null;
 
         // Change reference problem back to original

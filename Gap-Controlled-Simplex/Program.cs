@@ -23,9 +23,16 @@ void solveAndPrint(ISimplex solver, int[]? B = null)
 
     Console.WriteLine($"x = [{string.Join("; ", solution.x)}]");
     Console.WriteLine($"y = [{string.Join("; ", solution.y)}]");
-    Console.WriteLine($"c^T * x = {solution.PrimalValue}");
-    Console.WriteLine($"y^T * b = {solution.DualValue}");
-    Console.WriteLine($"gap = |V(D) - V(P)| = {solution.Gap}");
+
+    if (!solution.IsPrimalFeasible())
+        Console.WriteLine("Warning: solution is not primal feasible");
+    else
+        Console.WriteLine($"c^T * x = {solution.PrimalValue}");
+
+    if (!solution.IsDualFeasible())
+        Console.WriteLine("Warning: solution is not dual feasible");
+    else
+        Console.WriteLine($"y^T * b = {solution.DualValue}");
 }
 
 Console.WriteLine("=== Primal Simplex ===");
