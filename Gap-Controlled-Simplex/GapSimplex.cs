@@ -1,3 +1,5 @@
+using MathNet.Numerics.LinearAlgebra;
+
 namespace Gap_Controlled_Simplex;
 
 public class GapSimplex : ISimplex
@@ -30,20 +32,31 @@ public class GapSimplex : ISimplex
             }
             Console.WriteLine($"Gap: {gap} = {dualVertex.DualValue} - {primalVertex.PrimalValue}");
 
+            if (primalVertex.IsPrimalDegenerate())
+            {
+                var newPrimalPoint = primalSimplex.MakeFeasible(dualVertex);
+                if (newPrimalPoint is not null && 
+                    newPrimalPoint.PrimalValue > primalVertex.PrimalValue
+                )
+                    primalVertex = newPrimalPoint;
+            }
 
+            if (dualVertex.IsDualDegenerate())
+            {
+                var newDualPoint = dualSimplex.MakeFeasible(primalVertex);
+                if (newDualPoint is not null && 
+                    newDualPoint.DualValue < dualVertex.DualValue
+                )
+                    dualVertex = newDualPoint;
+            }
 
-            // A
             primalVertex = PrimalSimplex.Iteration(primalVertex);
-            if (primalVertex is null)
-                return null;
+            if (primalVertex is null || primalVertex.IsOptimalPoint())
+                return primalVertex;
 
-            // B
             dualVertex = DualSimplex.Iteration(dualVertex);
-            if (dualVertex is null)
-                return null;
-
-            //dualVertex = makeDualFeasible(p, primalVertex);
-            //primalVertex = makePrimalFeasible(p, dualVertex);
+            if (dualVertex is null || dualVertex.IsOptimalPoint())
+                return dualVertex;
         }
 
         if (primalVertex.IsOptimalPoint())
@@ -59,74 +72,6 @@ public class GapSimplex : ISimplex
     public Vertex? GetFeasibleVertex(Problem p) =>
         new PrimalSimplex().GetFeasibleVertex(p);
 
-    private static Vertex? makePrimalFeasible(Problem p, Vertex v)
-    {
-        while (!v.IsPrimalFeasible())
-        {
-            // Calculate primal residuals
-            var rp = v.primalResiduals();
-
-            // Leaving index: remove the "most primal-infeasible" index from the basis
-            int h = v.Basis.MaxBy(i => Math.Abs(rp[i]));
-
-            // Entering index
-            int k = -1;
-            double t = 0;
-            foreach (int j in v.NonBasis)
-            {
-                
-            }
-
-            var newBasis = v.Basis
-                .Where(i => i != h)
-                .Append(k);
-
-            v = new Vertex(p, newBasis);
-        }
-
-        return v;
-    }
-
-    private static Vertex? makeDualFeasible(Problem p, Vertex v)
-    {
-        while (!v.IsDualFeasible())
-        {
-            // Dual residuals c^T - y^T A
-            var rc = v.dualResiduals();
-
-            // Entering index
-            int k = v.NonBasis.MaxBy(i => rc[i]);
-
-            // Primal direction
-            var d = v.A_B.Inverse() * p.A.Row(k);
-
-            // Leaving index
-            int h = int.MaxValue;
-            double t = double.PositiveInfinity;
-            foreach (int i in v.Basis)
-            {
-                if (d[i] <= 0.0)
-                    continue;
-
-                var t_i = (p.b[i] - p.A.Row(i) * v.x) / d[i];
-                
-                if (t_i < t)
-                {
-                    t = t_i;
-                    h = i;
-                }
-            }
-
-            if (h == int.MaxValue)
-                return null;
-            
-            var newBasis = v.Basis
-                .Where(i => i != h)
-                .Append(k);
-            
-            v = new Vertex(p, newBasis);
-        }
-
-        return v;
-    } 
+    public Vertex? MakeFeasible(Vertex v) =>
+        throw new NotImplementedException();
 }

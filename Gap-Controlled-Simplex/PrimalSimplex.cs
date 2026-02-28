@@ -20,10 +20,7 @@ public class PrimalSimplex : ISimplex
         var h = v.Basis.First(i => v.y[i] < 0.0);
 
         // Wh is the h-th column of -A_b_inv
-        var Wh = (-1) * 
-            v.A_B
-            .Inverse()
-            .Column(v.Basis.IndexOf(h));
+        var Wh = v.W.Column(v.Basis.IndexOf(h));
 
         // Entering index
         int k = int.MaxValue;
@@ -66,6 +63,30 @@ public class PrimalSimplex : ISimplex
 
         // Unsolvable or unbounded problem
         return null;
+    }
+
+    public Vertex? MakeFeasible(Vertex v)
+    {
+        while (!v.IsPrimalFeasible())
+        {
+            // Calculate primal residuals
+            var rp = v.primalResiduals();
+
+            int k = v.NonBasis.MinBy(i => rp[i]);
+            var Ak = v.A.Row(k);
+
+            int h = v.Basis.FirstOrDefault(i => Ak * v.W.Column(v.Basis.IndexOf(i)) < 0.0, -1);
+            if (h == -1)
+                return null;
+
+            var newBasis = v.Basis
+                .Where(i => i != h)
+                .Append(k);
+
+            v = new Vertex(v.Problem, newBasis);
+        }
+
+        return v;
     }
 
     public Vertex? GetFeasibleVertex(Problem p)

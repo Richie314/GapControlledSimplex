@@ -66,10 +66,8 @@ public class DualSimplex : ISimplex
         return null;
     }
 
-    public Vertex? GetFeasibleVertex(Problem p)
+    public Vertex? MakeFeasible(Vertex v)
     {
-        Vertex v = new(p, Enumerable.Range(0, p.Dimension));
-
         while (!v.IsDualFeasible())
         {
 
@@ -84,12 +82,12 @@ public class DualSimplex : ISimplex
 
             foreach (int i in v.NonBasis)
             {
-                double denom = p.A.Row(i) * Wh;
+                double denom = v.A.Row(i) * Wh;
 
                 if (denom <= 0.0)
                     continue;
                 
-                double t = (p.b[i] - p.A.Row(i) * v.x) / denom;
+                double t = (v.b[i] - v.A.Row(i) * v.x) / denom;
 
                 if (t < tMin)
                 {
@@ -109,9 +107,12 @@ public class DualSimplex : ISimplex
                 .Where(i => i != h)
                 .Append(entering);
 
-            v = new Vertex(p, newBasis);
+            v = new Vertex(v.Problem, newBasis);
         }
         
         return v;
     }
+
+    public Vertex? GetFeasibleVertex(Problem p) =>
+        MakeFeasible(new Vertex(p, Enumerable.Range(0, p.Dimension)));
 }

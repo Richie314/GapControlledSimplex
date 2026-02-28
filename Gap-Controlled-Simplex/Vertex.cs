@@ -101,6 +101,21 @@ public class Vertex
         return maxViolation <= absTol + relTol * scale;
     }
 
+    public bool IsPrimalDegenerate(
+        double absTol = 1e-10, 
+        double relTol = 1e-9
+    ) {
+        double scale = Problem.b.AbsoluteMaximum();
+
+        return 
+            primalResiduals()
+            .Count(r_i => Math.Abs(r_i) <= absTol + relTol * scale)
+            > Problem.Dimension;
+    }
+
+    public Vector<double> dualResiduals() =>
+        Problem.c - Problem.A.TransposeThisAndMultiply(y);
+
     public bool IsDualFeasible(
         double absTol = 1e-10, 
         double relTol = 1e-9
@@ -114,8 +129,16 @@ public class Vertex
         return maxViolation <= absTol + relTol * scale;
     }
 
-    public Vector<double> dualResiduals() =>
-        Problem.c - Problem.A.TransposeThisAndMultiply(y);
+    public bool IsDualDegenerate(
+        double absTol = 1e-10, 
+        double relTol = 1e-9
+    ) {
+        double scale = Problem.c.AbsoluteMaximum();
+        return y
+            .Count(y_i => y_i < absTol + relTol * scale)
+            > Problem.Dimension;
+    }
+
 
     public bool IsOptimalPoint(
         double absTol = 1e-10, 
