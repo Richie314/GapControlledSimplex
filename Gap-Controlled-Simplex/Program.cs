@@ -7,7 +7,7 @@ var problem = new Problem(
     [ 1.0,  0.0, -1.0,   0.0]
 ).EnforcePositivity();
 
-void solveAndPrint(ISimplex solver, int[]? B = null)
+void solveAndPrint(ISolver solver, int[]? B = null)
 {
     var solution = solver.Maximize(problem, B);
 
