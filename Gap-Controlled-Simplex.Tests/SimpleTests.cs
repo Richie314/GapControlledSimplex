@@ -1,6 +1,6 @@
 ﻿namespace Gap_Controlled_Simplex.Tests;
 
-public class SimplexTest
+public class SimpleTests
 {
     public static IEnumerable<object[]> TestData => new List<object[]>
     {

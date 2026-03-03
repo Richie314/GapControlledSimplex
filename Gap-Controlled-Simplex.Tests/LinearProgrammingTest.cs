@@ -4,39 +4,46 @@ namespace Gap_Controlled_Simplex.Tests;
 
 public class LinearProgrammingTest
 {
-    public Problem p;
+    public Problem P;
 
-    public int[]? startingPrimalBasis;
+    public int[]? StartingPrimalBasis;
 
-    public Vector<double> expectedSolution;
+    public Vector<double>? ExpectedSolution;
+    public double? ExpectedValue;
 
     public LinearProgrammingTest(
-        double[] expected, 
+        double[]? expected, 
         int[]? B, 
         
         double[] c, 
         params double[][] Ab
     ) {
-        Assert.Equal(c.Length, expected.Length);
+        if (expected is not null)
+            Assert.Equal(c.Length, expected.Length);
 
         if (B is not null)
-            Assert.Equal(B.Length, c.Length);
+            Assert.Equal(c.Length, B.Length);
 
-        p = new Problem(c, Ab).EnforcePositivity();
-        Assert.True(p.Constraints >= p.Dimension, "Problem must have more constraints than variables");
+        P = new Problem(c, Ab).EnforcePositivity();
+        Assert.True(P.Constraints >= P.Dimension, "Problem must have more constraints than variables");
 
-        startingPrimalBasis = B;
-        expectedSolution = Vector<double>.Build.DenseOfArray(expected);
+        StartingPrimalBasis = B;
+
+        if (expected is not null)
+        {
+            ExpectedSolution = Vector<double>.Build.DenseOfArray(expected);
+            ExpectedValue = P.Eval(ExpectedSolution);
+        }
     }
 
     public void Test(ISolver solver, bool useStartingBasis = true)
     {
-        var result = solver.Maximize(p, useStartingBasis ? startingPrimalBasis : null);
+        var result = solver.Maximize(P, useStartingBasis ? StartingPrimalBasis : null);
         Assert.NotNull(result);
 
         Assert.True(result.IsOptimalPoint(), "Returned value not recognized as optimal");
 
-        var expectedValue = p.Eval(expectedSolution);
-        Assert.Equal(0.0, (result.PrimalValue - expectedValue) / expectedValue, 5.0e-3);
+        if (ExpectedValue is not null)
+            Assert.Equal(0.0, (result.PrimalValue - ExpectedValue.Value) / ExpectedValue.Value, 5.0e-3);
     }
 }
