@@ -1,4 +1,4 @@
-<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" version="29.5.2">
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" version="29.5.2" pages="3">
   <diagram name="State Diagram" id="_PSq95Kuain-giZnNaEP">
     <mxGraphModel dx="854" dy="528" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -85,6 +85,105 @@
             <mxPoint x="360" y="250" as="targetPoint" />
           </mxGeometry>
         </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="h0jwsX20-D2FpZEZsxYz" name="Flow chart algoritmo">
+    <mxGraphModel dx="589" dy="364" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-3" parent="1" style="html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.start" value="Inizio" vertex="1">
+          <mxGeometry height="30" width="80" x="130" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-5" parent="1" style="html=1;dashed=0;whiteSpace=wrap;shape=mxgraph.dfd.start" value="Fine" vertex="1">
+          <mxGeometry height="30" width="80" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-12" parent="1" style="html=1;dashed=0;whiteSpace=wrap;" value="Trova x,y ammissibili" vertex="1">
+          <mxGeometry height="50" width="100" x="120" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-13" edge="1" parent="1" source="il4_PJdzkpdcRYpTdPkP-3" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=15;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="il4_PJdzkpdcRYpTdPkP-12" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="390" y="300" as="sourcePoint" />
+            <mxPoint x="440" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-14" parent="1" style="html=1;dashed=0;whiteSpace=wrap;" value="Calcola gap(x, y)" vertex="1">
+          <mxGeometry height="50" width="100" x="120" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-15" parent="1" style="shape=rhombus;html=1;dashed=0;whiteSpace=wrap;perimeter=rhombusPerimeter;" value="gap(x, y) &amp;lt; t" vertex="1">
+          <mxGeometry height="80" width="120" x="110" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-16" edge="1" parent="1" source="il4_PJdzkpdcRYpTdPkP-15" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=-15;entryPerimeter=0;" target="il4_PJdzkpdcRYpTdPkP-5" value="Sì">
+          <mxGeometry height="50" relative="1" width="50" x="-0.7026" y="10" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="40" y="380" />
+            </Array>
+            <mxPoint x="390" y="400" as="sourcePoint" />
+            <mxPoint x="170" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-18" edge="1" parent="1" source="il4_PJdzkpdcRYpTdPkP-12" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="il4_PJdzkpdcRYpTdPkP-14" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="120" y="300" as="sourcePoint" />
+            <mxPoint x="170" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-19" edge="1" parent="1" source="il4_PJdzkpdcRYpTdPkP-14" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="il4_PJdzkpdcRYpTdPkP-15" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="120" y="300" as="sourcePoint" />
+            <mxPoint x="170" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-20" parent="1" style="html=1;dashed=0;whiteSpace=wrap;" value="Aggiorna x con simplesso primale" vertex="1">
+          <mxGeometry height="50" width="120" x="110" y="534" as="geometry" />
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-21" parent="1" style="html=1;dashed=0;whiteSpace=wrap;" value="Aggiorna y con simplesso duale" vertex="1">
+          <mxGeometry height="50" width="120" x="110" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-22" edge="1" parent="1" source="il4_PJdzkpdcRYpTdPkP-20" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="il4_PJdzkpdcRYpTdPkP-21" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="180" y="560" as="sourcePoint" />
+            <mxPoint x="230" y="510" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-23" edge="1" parent="1" source="il4_PJdzkpdcRYpTdPkP-21" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="il4_PJdzkpdcRYpTdPkP-14" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="170" y="680" />
+              <mxPoint x="320" y="680" />
+              <mxPoint x="320" y="210" />
+              <mxPoint x="170" y="210" />
+            </Array>
+            <mxPoint x="180" y="560" as="sourcePoint" />
+            <mxPoint x="270" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-24" parent="1" style="html=1;dashed=0;whiteSpace=wrap;" value="Aggiorna, eventualmente, (x,y) da (y,x) con euristiche" vertex="1">
+          <mxGeometry height="50" width="130" x="105" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-25" edge="1" parent="1" source="il4_PJdzkpdcRYpTdPkP-15" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="il4_PJdzkpdcRYpTdPkP-24" value="No">
+          <mxGeometry height="50" relative="1" width="50" x="-0.5" y="10" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="180" y="560" as="sourcePoint" />
+            <mxPoint x="230" y="510" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="il4_PJdzkpdcRYpTdPkP-26" edge="1" parent="1" source="il4_PJdzkpdcRYpTdPkP-24" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="il4_PJdzkpdcRYpTdPkP-20" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="210" y="440" as="sourcePoint" />
+            <mxPoint x="210" y="480" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="1eh3vMjswyoLMnURDEPE" name="Flow chart generale">
+    <mxGraphModel dx="854" dy="528" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
       </root>
     </mxGraphModel>
   </diagram>

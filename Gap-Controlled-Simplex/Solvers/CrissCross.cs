@@ -1,4 +1,4 @@
-namespace Gap_Controlled_Simplex;
+namespace Gap_Controlled_Simplex.Solvers;
 
 public class CrissCross : ISolver
 {

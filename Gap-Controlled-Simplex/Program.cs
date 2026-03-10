@@ -1,4 +1,5 @@
 ﻿using Gap_Controlled_Simplex;
+using Gap_Controlled_Simplex.Solvers;
 
 var problem = new Problem(
     [ 4.0,  5.0,  2.0], 

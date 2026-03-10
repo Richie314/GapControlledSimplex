@@ -1,4 +1,5 @@
 using MathNet.Numerics.LinearAlgebra;
+using Gap_Controlled_Simplex.Solvers;
 
 namespace Gap_Controlled_Simplex.Tests;
 

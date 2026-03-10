@@ -1,6 +1,6 @@
 using MathNet.Numerics.LinearAlgebra;
 
-namespace Gap_Controlled_Simplex;
+namespace Gap_Controlled_Simplex.Solvers;
 
 public class PrimalSimplex : ISimplex
 {

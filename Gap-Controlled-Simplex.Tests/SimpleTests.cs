@@ -1,4 +1,6 @@
-﻿namespace Gap_Controlled_Simplex.Tests;
+﻿using Gap_Controlled_Simplex.Solvers;
+
+namespace Gap_Controlled_Simplex.Tests;
 
 public class SimpleTests
 {
