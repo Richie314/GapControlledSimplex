@@ -70,15 +70,4 @@ public class Problem
             newB
         );
     }
-
-    public double Eval(Vector<double> x)
-    {
-        return c * x;
-    }
-
-    public double Eval(double[] x)
-    {
-        var v = Vector<double>.Build.DenseOfArray(x);
-        return Eval(v);
-    }
 }

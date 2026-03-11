@@ -22,19 +22,18 @@ public class GapSimplex : ISimplex
 
         while (!primalVertex.IsOptimalPoint() && !dualVertex.IsOptimalPoint())
         {
-            double gap = dualVertex.DualValue - primalVertex.PrimalValue;
-            if (primalVertex.PrimalValue != 0.0)
-            {
-                double relativeGap = Math.Abs(gap / primalVertex.PrimalValue);
-                Console.WriteLine($"Relative gap: {relativeGap}");
-            }
-            Console.WriteLine($"Gap: {gap} = {dualVertex.DualValue} - {primalVertex.PrimalValue}");
+            var (gap, relativeGap, dualValue, primalValue)
+                = Vertex.Gap(dualVertex, primalVertex);
+                
+            if (relativeGap.HasValue)
+                Console.WriteLine($"Relative gap: {relativeGap.Value}");
+            Console.WriteLine($"Gap: {gap} = {dualValue} - {primalValue}");
 
             if (primalVertex.IsPrimalDegenerate())
             {
                 var newPrimalPoint = primalSimplex.MakeFeasible(dualVertex);
                 if (newPrimalPoint is not null && 
-                    newPrimalPoint.PrimalValue > primalVertex.PrimalValue
+                    newPrimalPoint.primalValue() > primalValue
                 )
                     primalVertex = newPrimalPoint;
             }
@@ -43,7 +42,7 @@ public class GapSimplex : ISimplex
             {
                 var newDualPoint = dualSimplex.MakeFeasible(primalVertex);
                 if (newDualPoint is not null && 
-                    newDualPoint.DualValue < dualVertex.DualValue
+                    newDualPoint.dualValue() < dualValue
                 )
                     dualVertex = newDualPoint;
             }

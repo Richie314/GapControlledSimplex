@@ -1,3 +1,5 @@
+using MathNet.Numerics.LinearAlgebra;
+
 namespace Gap_Controlled_Simplex.Solvers;
 
 public class DualSimplex : ISimplex
@@ -66,44 +68,31 @@ public class DualSimplex : ISimplex
 
     public Vertex? MakeFeasible(Vertex v)
     {
+        int n = v.Problem.Dimension;
+
         while (!v.IsDualFeasible())
         {
+            var p = v
+                .dualInfeasibleValues()
+                .First();
 
-            // Direzione dual simplex
-            // Wh = h-th column of -A_B^{-1}
-            int h = v.Basis.First(i => v.y[i] < 0.0);
-            var Wh = v.W.Column(v.Basis.IndexOf(h));
+            var eP = Vector<double>.Build.Dense(n);
+            eP[v.Basis.IndexOf(p.index)] = 1.0;
+            var d = v.A_B.LU().Solve(eP);
+            
+            var q = v
+                .NonBasis
+                .Select(i => new { i, den = v.A.Row(i) * d })
+                .Where(p => p.den <= -Vertex.AbsoluteTolerance)
+                .OrderBy(p => Math.Abs(v.b[p.i] - v.A.Row(p.i).DotProduct(d)) / p.den)
+                .FirstOrDefault(defaultValue: null);
 
-            // Ratio test duale
-            int entering = -1;
-            double tMin = double.PositiveInfinity;
-
-            foreach (int i in v.NonBasis)
-            {
-                double denom = v.A.Row(i) * Wh;
-
-                if (denom <= 0.0)
-                    continue;
-                
-                double t = (v.b[i] - v.A.Row(i) * v.x) / denom;
-
-                if (t < tMin)
-                {
-                    tMin = t;
-                    entering = i;
-                }
-            }
-
-            // Nessun vincolo blocca → problema mal posto
-            if (entering == -1)
-            {
+            if (q is null)
                 throw new Exception("Unbounded problem");
-            }
 
-            // Pivot: sostituisci vincolo h
             var newBasis = v.Basis
-                .Where(i => i != h)
-                .Append(entering);
+                .Where(i => i != p.index)
+                .Append(q.i);
 
             v = new Vertex(v.Problem, newBasis);
         }
@@ -113,4 +102,5 @@ public class DualSimplex : ISimplex
 
     public Vertex? GetFeasibleVertex(Problem p) =>
         MakeFeasible(new Vertex(p, Enumerable.Range(0, p.Dimension)));
+
 }

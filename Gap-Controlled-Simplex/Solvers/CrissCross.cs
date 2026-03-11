@@ -11,7 +11,6 @@ public class CrissCross : ISolver
         {
             var v = new Vertex(problem, B);
             var r_p = v.primalResiduals();
-            var r_d = v.dualResiduals();
 
             var primalLeaving = r_p.Find(r_i => r_i < 0);
             if (primalLeaving is not null)
@@ -25,17 +24,6 @@ public class CrissCross : ISolver
                 */
             }
 
-            var dualLeaving = r_d.Find(r_i => r_i != 0.0);
-            if (dualLeaving is not null)
-            {
-                throw new NotImplementedException();
-                /*
-                int entringRow = ??
-
-                B = B.Where(i => i != dualLeaving.Item1).Append(enteringRow).ToArray();
-                continue;
-                */
-            }
 
             return v;
         }

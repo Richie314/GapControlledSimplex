@@ -24,12 +24,12 @@ void solveAndPrint(ISolver solver, int[]? B = null)
     if (!solution.IsPrimalFeasible())
         Console.WriteLine("Warning: solution is not primal feasible");
     else
-        Console.WriteLine($"c^T * x = {solution.PrimalValue}");
+        Console.WriteLine($"c^T * x = {solution.primalValue()}");
 
     if (!solution.IsDualFeasible())
         Console.WriteLine("Warning: solution is not dual feasible");
     else
-        Console.WriteLine($"y^T * b = {solution.DualValue}");
+        Console.WriteLine($"y^T * b = {solution.dualValue()}");
 }
 
 

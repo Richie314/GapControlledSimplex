@@ -5,17 +5,19 @@ namespace Gap_Controlled_Simplex;
 
 public class Vertex
 {
+    public const double AbsoluteTolerance = 1.0e-10;
+    public const double RelativeTolerance = 1.0e-9;
+
+
     public readonly Problem Problem;
 
     public readonly int[] Basis;
 
     public readonly Vector<double> x;
 
-    public readonly Vector<double> y;
+    public readonly Vector<double> y_B;
 
     public readonly Matrix<double> A_B;
-
-    public readonly Vector<double> b_B;
 
     /// <summary>
     /// W = - A_B^-1
@@ -28,21 +30,21 @@ public class Vertex
         Basis = B.OrderBy(i => i).ToArray();
 
         A_B = getA_B(A, Basis);
-        b_B = getb_B(b, Basis);
+        var b_B = Vector<double>.Build.DenseOfIndexed(
+            Basis.Length,
+            Enumerable
+                .Range(0, Basis.Length)
+                .Select(i => (i, b[Basis[i]]))
+        );
 
         W = -A_B.Inverse();
 
         // A_B x = b_B
         x = A_B.Solve(b_B); // x = -W * b_B;
 
-        y = Vector<double>.Build.Dense(p.Constraints, 0);
-
         // y_B = c^T A_B^-1
         // y_B A_B = c^T
-        // var yb = Problem.c * A_B.Inverse();
-        var yb = A_B.Transpose().Solve(Problem.c);
-        for (int i = 0; i < Basis.Length; i++)
-            y[Basis[i]] = yb[i];
+        y_B = A_B.Transpose().Solve(Problem.c);
     }
 
     public Matrix<double> A { get => Problem.A; }
@@ -64,25 +66,23 @@ public class Vertex
         return A_B;
     }
 
-    private static Vector<double> getb_B(Vector<double> b, int[] Basis)
-    {
-        int n = Basis.Length;
-
-        var b_B = Vector<double>.Build.Dense(n, 0);
-
-        for (int i = 0; i < n; i++)
-            b_B[i] = b[Basis[i]];
-
-        return b_B;
-    }
-
-    public int[] NonBasis
+    public IEnumerable<int> NonBasis
     {
         get => Enumerable
             .Range(0, Problem.Constraints)
-            .Except(Basis)
-            .ToArray();
+            .Except(Basis);
     }
+
+    public Vector<double> y
+    {
+        get => Vector<double>.Build.DenseOfIndexed(
+            Problem.Constraints,
+            Enumerable
+                .Range(0, Problem.Dimension)
+                .Select(i => (Basis[i], y_B[i]))
+        );
+    }
+
 
     public Vector<double> primalResiduals()
     {
@@ -92,18 +92,26 @@ public class Vertex
     }
 
     public bool IsPrimalFeasible(
-        double absTol = 1e-10, 
-        double relTol = 1e-9
-    ) {
-        double maxViolation = Math.Abs(primalResiduals().AbsoluteMaximum());
-        double scale = Problem.b.AbsoluteMaximum();
+        double absTol = AbsoluteTolerance, 
+        double relTol = RelativeTolerance
+    ) => !primalInfeasibleRows(absTol, relTol).Any();
 
-        return maxViolation <= absTol + relTol * scale;
+    public IEnumerable<(int index, double slack)> primalInfeasibleRows(
+        double absTol = AbsoluteTolerance, 
+        double relTol = RelativeTolerance
+    ) {
+        double scale = Problem.b.AbsoluteMaximum();
+        var slack = primalResiduals();
+
+        return Enumerable
+            .Range(0, Problem.Constraints)
+            .Select(i => (i, slack: slack[i]))
+            .Where(p => Math.Abs(p.slack) > absTol + relTol * scale);
     }
 
     public bool IsPrimalDegenerate(
-        double absTol = 1e-10, 
-        double relTol = 1e-9
+        double absTol = AbsoluteTolerance, 
+        double relTol = RelativeTolerance
     ) {
         double scale = Problem.b.AbsoluteMaximum();
 
@@ -113,59 +121,78 @@ public class Vertex
             > Problem.Dimension;
     }
 
-    public Vector<double> dualResiduals() =>
-        Problem.c - Problem.A.TransposeThisAndMultiply(y);
+    public IEnumerable<(int index, double slack)> 
+    dualInfeasibleValues(double absTol = AbsoluteTolerance)
+        => y_B
+            .EnumerateIndexed()
+            .Where(p => p.Item2 < -absTol)
+            .Select(p => (index: Basis[p.Item1], slack: Math.Abs(p.Item2)));
 
-    public bool IsDualFeasible(
-        double absTol = 1e-10, 
-        double relTol = 1e-9
-    ) {
-        if (!y.All(y_i => y_i >= 0.0))
-            return false;
 
-        double maxViolation = Math.Abs(dualResiduals().AbsoluteMaximum());
-        double scale = Problem.c.AbsoluteMaximum();
+    public bool IsDualFeasible(double absTol = AbsoluteTolerance) 
+        => !dualInfeasibleValues(absTol).Any();
 
-        return maxViolation <= absTol + relTol * scale;
-    }
-
-    public bool IsDualDegenerate(
-        double absTol = 1e-10, 
-        double relTol = 1e-9
-    ) {
-        double scale = Problem.c.AbsoluteMaximum();
-        return y
-            .Count(y_i => y_i < absTol + relTol * scale)
-            > Problem.Dimension;
-    }
+    public bool IsDualDegenerate(double absTol = AbsoluteTolerance) 
+        => y_B.Any(y_i => Math.Abs(y_i) < absTol);
 
 
     public bool IsOptimalPoint(
-        double absTol = 1e-10, 
-        double relTol = 1e-9
+        double absTol = AbsoluteTolerance, 
+        double relTol = RelativeTolerance
     ) => 
-        IsPrimalFeasible(absTol, relTol) && IsDualFeasible(absTol, relTol);
+        IsPrimalFeasible(absTol, relTol) && IsDualFeasible(absTol);
 
 
-    private double calculatePrimalValue()
-    {
-        if (!IsPrimalFeasible())
-            throw new InvalidOperationException("Vertex is not primal feasible.");
-        return Problem.Eval(x);
-    }
-    public double PrimalValue
-    {
-        get => calculatePrimalValue();
+    public double primalValue(
+        double absTol = AbsoluteTolerance, 
+        double relTol = RelativeTolerance
+    ) {
+        if (!IsPrimalFeasible(absTol, relTol))
+            throw new InvalidOperationException(
+                "Point is not primal feasible, " +
+                "hence the primal objective function c^T * x cannot be evaluated."
+            );
+
+        return Problem.c * x;
     }
 
-    private double calculateDualValue()
+    public double dualValue(double absTol = AbsoluteTolerance)
     {
-        if (!IsDualFeasible())
-            throw new InvalidOperationException("Vertex is not dual feasible.");
-        return Problem.b * y;
+        if (!IsDualFeasible(absTol))
+            throw new InvalidOperationException(
+                "Point is not dual feasible, hence the dual objective function b^T * y cannot be evaluated."
+            );
+
+        // return Problem.b * y;
+        
+        // Since y_N = 0, z = b_B * y_B
+        return Enumerable
+            .Range(0, Problem.Dimension)
+            .Sum(i => y_B[i] * b[Basis[i]]);
     }
-    public double DualValue
-    {
-        get => calculateDualValue();
+
+    public static (double gap, double? relativeGap, double dualValue, double primalValue) 
+    Gap(Vertex dualVertex, 
+        Vertex primalVertex,
+        double absTol = AbsoluteTolerance, 
+        double relTol = RelativeTolerance
+    ) {
+        if (dualVertex.Problem != primalVertex.Problem)
+            throw new InvalidOperationException(
+                "Given vertices are based on different problems!"
+            );
+
+        double dualValue = dualVertex.dualValue(absTol);
+        double primalValue = primalVertex.primalValue(absTol, relTol);
+
+        double gap = dualValue - primalValue;
+        double? relativeGap = Math.Abs(primalValue) > absTol ? (gap / primalValue) : null;
+
+        return (
+            gap,
+            relativeGap,
+            dualValue,
+            primalValue
+        );
     }
 }

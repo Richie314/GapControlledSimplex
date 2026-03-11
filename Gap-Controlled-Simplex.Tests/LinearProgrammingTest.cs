@@ -33,7 +33,7 @@ public class LinearProgrammingTest
         if (expected is not null)
         {
             ExpectedSolution = Vector<double>.Build.DenseOfArray(expected);
-            ExpectedValue = P.Eval(ExpectedSolution);
+            ExpectedValue = P.c * ExpectedSolution;
         }
     }
 
@@ -44,7 +44,23 @@ public class LinearProgrammingTest
 
         Assert.True(result.IsOptimalPoint(), "Returned value not recognized as optimal");
 
+        double p = result.primalValue(), 
+               d = result.dualValue();
+
+        Assert.Equal(p, d, Vertex.AbsoluteTolerance);
+
         if (ExpectedValue is not null)
-            Assert.Equal(0.0, (result.PrimalValue - ExpectedValue.Value) / ExpectedValue.Value, 5.0e-3);
+        {
+            if (Math.Abs(ExpectedValue.Value) > Vertex.AbsoluteTolerance)
+            {
+                // Can safely divide by ExpectedValue.Value
+                double relativeGap = (p - ExpectedValue.Value) / ExpectedValue.Value;
+                Assert.Equal(0.0, relativeGap, 5.0e-3);
+            } else
+            {
+                // ExpectedValue.Value is near zero
+                Assert.Equal(p, ExpectedValue.Value, Vertex.AbsoluteTolerance * 10);
+            }
+        }
     }
 }

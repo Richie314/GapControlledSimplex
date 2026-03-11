@@ -9,42 +9,29 @@ public class PrimalSimplex : ISimplex
         if (!v.IsPrimalFeasible())
             return null;
 
-        // A_N*x has 0 component => degenerate point
-
-        if (v.IsDualFeasible()) // y_b >= 0
-        {
-            // Optimal value
-            return v;
-        }
-
-        var h = v.Basis.First(i => v.y[i] < 0.0);
+        var (h, dualSlack) = v
+            .dualInfeasibleValues()
+            .FirstOrDefault(defaultValue: (-1, 0.0));
+        if (h == -1)
+            return v; // y_b >= 0. Optimal value
 
         // Wh is the h-th column of -A_b_inv
         var Wh = v.W.Column(v.Basis.IndexOf(h));
 
         // Entering index
-        int k = int.MaxValue;
-        double t = double.PositiveInfinity;
-        foreach (int i in v.NonBasis.Where(i => v.A.Row(i) * Wh > 0.0))
-        {
-            var t_i = (v.b[i] - v.A.Row(i) * v.x) / (v.A.Row(i) * Wh);
-            
-            if (t_i < t)
-            {
-                t = t_i;
-                k = i;
-            }
-        }
+        var k = v
+            .NonBasis
+            .Select(i => new { i, den = v.A.Row(i) * Wh })
+            .Where(p => p.den > Vertex.AbsoluteTolerance)
+            .OrderBy(p => (v.b[p.i] - v.A.Row(p.i) * v.x) / p.den)
+            .FirstOrDefault(defaultValue: null);
 
-        if (k == int.MaxValue)
-        {
-            // Unbounded problem
-            return null;
-        }
+        if (k is null)
+            return null; // Unbounded problem
 
         var newBasis = v.Basis
             .Where(i => i != h)
-            .Append(k);
+            .Append(k.i);
         return new Vertex(v.Problem, newBasis);
     }
 
@@ -158,7 +145,7 @@ public class PrimalSimplex : ISimplex
         );
         if (auxSolution is null || 
             !auxSolution.IsOptimalPoint() || 
-            auxSolution.PrimalValue < 0.0
+            auxSolution.primalValue() < 0.0
         ) // Check if the simplex failed for the aux problem
             return null;
 
