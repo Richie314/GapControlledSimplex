@@ -10,7 +10,18 @@ var problem = new Problem(
 
 void solveAndPrint(ISolver solver, int[]? B = null)
 {
-    var solution = solver.Maximize(problem, B);
+    Solution? solution = null;
+
+    try
+    {
+        solution = solver.Maximize(problem, B);
+    } catch (Exception ex)
+    {
+        Console.WriteLine(ex.Message);
+        if (!string.IsNullOrWhiteSpace(ex.StackTrace))
+            Console.WriteLine(ex.StackTrace);
+        return;
+    }
 
     if (solution is null)
     {
@@ -21,15 +32,21 @@ void solveAndPrint(ISolver solver, int[]? B = null)
     Console.WriteLine($"x = [{string.Join("; ", solution.x)}]");
     Console.WriteLine($"y = [{string.Join("; ", solution.y)}]");
 
-    if (!solution.IsPrimalFeasible())
-        Console.WriteLine("Warning: solution is not primal feasible");
-    else
-        Console.WriteLine($"c^T * x = {solution.primalValue()}");
+    try
+    {
+        Console.WriteLine($"c^T * x = {solution.Point.primalValue()}"); 
+    } catch (Exception ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
 
-    if (!solution.IsDualFeasible())
-        Console.WriteLine("Warning: solution is not dual feasible");
-    else
-        Console.WriteLine($"y^T * b = {solution.dualValue()}");
+    try
+    {
+        Console.WriteLine($"y^T * b = {solution.Point.dualValue()}");
+    } catch (Exception ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
 }
 
 

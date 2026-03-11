@@ -1,8 +1,8 @@
 namespace Gap_Controlled_Simplex.Solvers;
 
-public class GapSimplex : ISimplex
+public class GapSimplex : IterativeSolver, ISimplex
 {
-    public Vertex? Maximize(Problem p, int[]? StartBasis = null)
+    public override Solution? Maximize(Problem p, int[]? StartBasis = null)
     {
         var primalSimplex = new PrimalSimplex();
         var dualSimplex = new DualSimplex();
@@ -20,6 +20,7 @@ public class GapSimplex : ISimplex
         )
             return null;
 
+        int primalIterations = 0, dualIterations = 0;
         while (!primalVertex.IsOptimalPoint() && !dualVertex.IsOptimalPoint())
         {
             var (gap, relativeGap, dualValue, primalValue)
@@ -49,21 +50,25 @@ public class GapSimplex : ISimplex
 
             primalVertex = PrimalSimplex.Iteration(primalVertex);
             if (primalVertex is null || primalVertex.IsOptimalPoint())
-                return primalVertex;
+                break;
+            primalIterations++;
+            checkIterationCount(primalIterations);
 
             dualVertex = DualSimplex.Iteration(dualVertex);
             if (dualVertex is null || dualVertex.IsOptimalPoint())
-                return dualVertex;
+                break;
+            dualIterations++;
+            checkIterationCount(dualIterations);
         }
 
-        if (primalVertex.IsOptimalPoint())
+        if (primalVertex is null || dualVertex is null)
+            return null;
+
+        return new Solution()
         {
-            Console.WriteLine("Optimal primal vertex found");
-            return primalVertex;
-        }
-
-        Console.WriteLine("Optimal dual vertex found");
-        return dualVertex;
+            Point = primalVertex.IsOptimalPoint() ? primalVertex : dualVertex,
+            IterationCount = primalIterations
+        };
     }
 
     public Vertex? GetFeasibleVertex(Problem p) =>

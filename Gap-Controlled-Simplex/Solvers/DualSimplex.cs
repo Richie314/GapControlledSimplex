@@ -1,8 +1,6 @@
-using MathNet.Numerics.LinearAlgebra;
-
 namespace Gap_Controlled_Simplex.Solvers;
 
-public class DualSimplex : ISimplex
+public class DualSimplex : IterativeSolver, ISimplex
 {
     public static Vertex? Iteration(Vertex v)
     {
@@ -50,17 +48,27 @@ public class DualSimplex : ISimplex
     }
 
 
-    public Vertex? Maximize(Problem p, int[]? StartBasis = null)
+    public override Solution? Maximize(Problem p, int[]? StartBasis = null)
     {
         Vertex? current = 
             StartBasis is not null ? 
             new(p, StartBasis) : 
             GetFeasibleVertex(p);
 
-        for (; current is not null; current = Iteration(current))
-        {
+        for (int iterations = 0; 
+            current is not null; 
+            current = Iteration(current), iterations++
+        ) {
             if (current.IsOptimalPoint())
-                return current;
+            {
+                return new Solution()
+                {
+                    Point = current,
+                    IterationCount = iterations
+                };
+            }
+
+            checkIterationCount(iterations);
         }
 
         return null;
@@ -76,18 +84,26 @@ public class DualSimplex : ISimplex
                 .dualInfeasibleValues()
                 .First();
 
-            var eP = Vector<double>.Build.Dense(n);
-            eP[v.Basis.IndexOf(p.index)] = 1.0;
-            var d = v.A_B.LU().Solve(eP);
+            var d = -v.W * v.A.Row(p.index);
             
+            // Bland rule choice
             var q = v
                 .NonBasis
-                .Select(i => new { i, den = v.A.Row(i) * d })
-                .Where(p => p.den <= -Vertex.AbsoluteTolerance)
-                .OrderBy(p => Math.Abs(v.b[p.i] - v.A.Row(p.i).DotProduct(d)) / p.den)
-                .FirstOrDefault(defaultValue: null);
+                .Select(i => new { i, a_pi = v.A.Row(i) * d })
+                .FirstOrDefault(
+                    p => p.a_pi <= -Vertex.AbsoluteTolerance, 
+                    defaultValue: new { i = -1, a_pi = 0.0 }
+                );
+                
+            // Largest pivot choice
+            //var q = v
+            //    .NonBasis
+            //    .Select(i => new { i, a_pi = v.A.Row(i) * d })
+            //    .Where(p => p.a_pi <= -Vertex.AbsoluteTolerance)
+            //    .OrderBy(p => Math.Abs(p.a_pi))
+            //    .FirstOrDefault(defaultValue: null);
 
-            if (q is null)
+            if (q.i == -1)
                 throw new Exception("Unbounded problem");
 
             var newBasis = v.Basis

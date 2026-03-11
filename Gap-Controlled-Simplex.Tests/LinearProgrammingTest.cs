@@ -42,7 +42,7 @@ public class LinearProgrammingTest
         var result = solver.Maximize(P, useStartingBasis ? StartingPrimalBasis : null);
         Assert.NotNull(result);
 
-        var (gap, relativeGap, dualValue, primalValue) = Vertex.Gap(result, result);
+        var (gap, relativeGap, dualValue, primalValue) = Vertex.Gap(result.Point, result.Point);
 
         Assert.Equal(primalValue, dualValue, Vertex.AbsoluteTolerance * 10);
         Assert.Equal(0.0, gap, Vertex.AbsoluteTolerance * 10);
@@ -50,7 +50,7 @@ public class LinearProgrammingTest
         if (relativeGap.HasValue)
             Assert.Equal(0.0, relativeGap.Value, Vertex.RelativeTolerance * 10);
 
-        Assert.True(result.IsOptimalPoint(), "Returned value not recognized as optimal");
+        Assert.True(result.Point.IsOptimalPoint(), "Returned value not recognized as optimal");
 
         if (ExpectedValue is not null)
         {

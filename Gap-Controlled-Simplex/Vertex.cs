@@ -17,8 +17,6 @@ public class Vertex
 
     public readonly Vector<double> y_B;
 
-    public readonly Matrix<double> A_B;
-
     /// <summary>
     /// W = - A_B^-1
     /// </summary>
@@ -27,9 +25,9 @@ public class Vertex
     public Vertex(Problem p, IEnumerable<int> B)
     {
         Problem = p;
-        Basis = B.OrderBy(i => i).ToArray();
+        Basis = B.Distinct().OrderBy(i => i).ToArray();
 
-        A_B = getA_B(A, Basis);
+        var A_B = getA_B(A, Basis);
         var b_B = Vector<double>.Build.DenseOfIndexed(
             Basis.Length,
             Enumerable

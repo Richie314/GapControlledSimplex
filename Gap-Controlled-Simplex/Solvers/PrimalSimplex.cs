@@ -2,7 +2,7 @@ using MathNet.Numerics.LinearAlgebra;
 
 namespace Gap_Controlled_Simplex.Solvers;
 
-public class PrimalSimplex : ISimplex
+public class PrimalSimplex : IterativeSolver, ISimplex
 {
     public static Vertex? Iteration(Vertex v)
     {
@@ -35,17 +35,27 @@ public class PrimalSimplex : ISimplex
         return new Vertex(v.Problem, newBasis);
     }
 
-    public Vertex? Maximize(Problem p, int[]? StartBasis = null)
+    public override Solution? Maximize(Problem p, int[]? StartBasis = null)
     {
         Vertex? current = 
             StartBasis is not null ? 
             new(p, StartBasis) : 
             GetFeasibleVertex(p);
 
-        for (; current is not null; current = Iteration(current))
-        {
+        for (int iterations = 0; 
+             current is not null; 
+             current = Iteration(current), iterations++
+        ) {
             if (current.IsOptimalPoint())
-                return current;
+            {
+                return new Solution()
+                {
+                    Point = current,
+                    IterationCount = iterations
+                };
+            }
+
+            checkIterationCount(iterations);
         }
 
         // Unsolvable or unbounded problem
@@ -144,8 +154,8 @@ public class PrimalSimplex : ISimplex
             initialVertex.Basis.Concat(V).ToArray()
         );
         if (auxSolution is null || 
-            !auxSolution.IsOptimalPoint() || 
-            auxSolution.primalValue() < 0.0
+            !auxSolution.Point.IsOptimalPoint() || 
+            auxSolution.Point.primalValue() < 0.0
         ) // Check if the simplex failed for the aux problem
             return null;
 
