@@ -42,24 +42,27 @@ public class LinearProgrammingTest
         var result = solver.Maximize(P, useStartingBasis ? StartingPrimalBasis : null);
         Assert.NotNull(result);
 
+        var (gap, relativeGap, dualValue, primalValue) = Vertex.Gap(result, result);
+
+        Assert.Equal(primalValue, dualValue, Vertex.AbsoluteTolerance * 10);
+        Assert.Equal(0.0, gap, Vertex.AbsoluteTolerance * 10);
+
+        if (relativeGap.HasValue)
+            Assert.Equal(0.0, relativeGap.Value, Vertex.RelativeTolerance * 10);
+
         Assert.True(result.IsOptimalPoint(), "Returned value not recognized as optimal");
-
-        double p = result.primalValue(), 
-               d = result.dualValue();
-
-        Assert.Equal(p, d, Vertex.AbsoluteTolerance);
 
         if (ExpectedValue is not null)
         {
             if (Math.Abs(ExpectedValue.Value) > Vertex.AbsoluteTolerance)
             {
                 // Can safely divide by ExpectedValue.Value
-                double relativeGap = (p - ExpectedValue.Value) / ExpectedValue.Value;
-                Assert.Equal(0.0, relativeGap, 5.0e-3);
+                double relativeError = (primalValue - ExpectedValue.Value) / ExpectedValue.Value;
+                Assert.Equal(0.0, relativeError, 5.0e-3);
             } else
             {
                 // ExpectedValue.Value is near zero
-                Assert.Equal(p, ExpectedValue.Value, Vertex.AbsoluteTolerance * 10);
+                Assert.Equal(primalValue, ExpectedValue.Value, Vertex.AbsoluteTolerance * 10);
             }
         }
     }
