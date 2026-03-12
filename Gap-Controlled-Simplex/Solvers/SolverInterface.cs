@@ -2,9 +2,9 @@ namespace Gap_Controlled_Simplex.Solvers;
 
 public interface ISolver
 {
-    public Solution? Maximize(Problem problem, int[]? B = null);
+    public Solution? Maximize(in Problem problem, int[]? B = null);
     
-    public Solution? Minimize(Problem p, int[]? StartBasis = null)
+    public Solution? Minimize(in Problem p, int[]? StartBasis = null)
     {
         var invertedProblem = new Problem(
             -p.c,

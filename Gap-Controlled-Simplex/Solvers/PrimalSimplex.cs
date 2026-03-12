@@ -9,41 +9,50 @@ public class PrimalSimplex : IterativeSolver, ISimplex
         if (!v.IsPrimalFeasible())
             return null;
 
+        // Leaving index (Bland rule)
         var (h, dualSlack) = v
             .dualInfeasibleValues()
             .FirstOrDefault(defaultValue: (-1, 0.0));
         if (h == -1)
             return v; // y_b >= 0. Optimal value
 
-        // Wh is the h-th column of -A_b_inv
+        // Wh is the h-th column of -A_B^-1
         var Wh = v.W.Column(v.Basis.IndexOf(h));
 
-        // Entering index
-        var k = v
+        // Entering index (Bland rule)
+        var (k, enteringDen) = v
             .NonBasis
-            .Select(i => new { i, den = v.A.Row(i) * Wh })
+            .Select(i => (i, den: v.A.Row(i) * Wh ))
             .Where(p => p.den > Vertex.AbsoluteTolerance)
             .OrderBy(p => (v.b[p.i] - v.A.Row(p.i) * v.x) / p.den)
-            .FirstOrDefault(defaultValue: null);
+            .FirstOrDefault(defaultValue: (-1, 0.0));
 
-        if (k is null)
+        if (k == -1)
             return null; // Unbounded problem
 
         var newBasis = v.Basis
-            .Where(i => i != h)
-            .Append(k.i);
+            .Except([h])
+            .Append(k);
         return new Vertex(v.Problem, newBasis);
     }
 
-    public override Solution? Maximize(Problem p, int[]? StartBasis = null)
+    public override (Vertex?, int) GetStartingPoint(in Problem p, int[]? StartBasis = null)
     {
-        Vertex? current = 
-            StartBasis is not null ? 
-            new(p, StartBasis) : 
-            GetFeasibleVertex(p);
+        if (StartBasis is not null)
+            return (new(p, StartBasis), 0);
+
+        var auxiliaryPoint = GetFeasibleVertex(p);
+        if (auxiliaryPoint is null)
+            return (null, 0);
+        return auxiliaryPoint.Value;
+    }
+
+    public override Solution? Maximize(in Problem p, int[]? StartBasis = null)
+    {
+        var (current, initialIterations) = GetStartingPoint(p, StartBasis);
 
         for (int iterations = 0; 
-             current is not null; 
+             current is not null && checkIterationCount(iterations); 
              current = Iteration(current), iterations++
         ) {
             if (current.IsOptimalPoint())
@@ -51,33 +60,41 @@ public class PrimalSimplex : IterativeSolver, ISimplex
                 return new Solution()
                 {
                     Point = current,
-                    IterationCount = iterations
+                    IterationCount = iterations,
+                    InitialIterations = initialIterations
                 };
             }
-
-            checkIterationCount(iterations);
         }
 
         // Unsolvable or unbounded problem
         return null;
     }
 
-    public Vertex? MakeFeasible(Vertex v)
+    public Vertex? MakeFeasible(in Vertex w)
     {
+        Vertex v = w;
         while (!v.IsPrimalFeasible())
         {
-            // Calculate primal residuals
-            var rp = v.primalResiduals();
+            // Entering index (Largest infeasibility)
+            var (k, primalSlack) = v
+                .primalInfeasibleRows()
+                .MinBy(row => row.slack);
 
-            int k = v.NonBasis.MinBy(i => rp[i]);
+            // Direction
             var Ak = v.A.Row(k);
 
-            int h = v.Basis.FirstOrDefault(i => Ak * v.W.Column(v.Basis.IndexOf(i)) < 0.0, -1);
+            // Leaving index (Bland rule)
+            int h = v
+                .Basis
+                .FirstOrDefault(
+                    i => Ak * v.W.Column(v.Basis.IndexOf(i)) < 0.0, 
+                    -1
+                );
             if (h == -1)
                 return null;
 
             var newBasis = v.Basis
-                .Where(i => i != h)
+                .Except([h])
                 .Append(k);
 
             v = new Vertex(v.Problem, newBasis);
@@ -86,13 +103,19 @@ public class PrimalSimplex : IterativeSolver, ISimplex
         return v;
     }
 
-    public Vertex? GetFeasibleVertex(Problem p)
+    public (Vertex v, int iterations)? GetFeasibleVertex(in Problem p)
     {
-        var initialRandomBasis = Enumerable.Range(0, p.Dimension).ToArray();
+        int n = p.Dimension, 
+            m = p.Constraints;
+
+        var A = p.A;
+        var b = p.b;
+
+        var initialRandomBasis = Enumerable.Range(0, n).ToArray();
         var initialVertex = new Vertex(p, initialRandomBasis);
 
         if (initialVertex.IsPrimalFeasible())
-            return initialVertex;
+            return (initialVertex, 0);
 
         // Create the auxiliary problem and solve it for a feasible vertex
         // Let's consider an initial B s.t. 
@@ -111,19 +134,19 @@ public class PrimalSimplex : IterativeSolver, ISimplex
         int additionalVariables = V.Length;
 
         var auxMatrix = Matrix<double>.Build.Dense(
-            p.Constraints + additionalVariables, 
-            p.Dimension + additionalVariables, 
+            m + additionalVariables, 
+            n + additionalVariables, 
             (i, j) =>
             {
-                if (i < p.Constraints && j < p.Dimension)
-                    return p.A[i, j];
+                if (i < m && j < n)
+                    return A[i, j];
                 
-                if (i >= p.Constraints && j >= p.Dimension)
-                    if (i - p.Constraints == j - p.Dimension)
+                if (i >= m && j >= n)
+                    if (i - m == j - n)
                         return -1.0;
 
-                if (V.Contains(i) && j >= p.Dimension)
-                    if (V.IndexOf(i) == j - p.Dimension)
+                if (V.Contains(i) && j >= n)
+                    if (V.IndexOf(i) == j - n)
                         return -1.0;
                 
                 return 0.0;
@@ -131,11 +154,11 @@ public class PrimalSimplex : IterativeSolver, ISimplex
         );
         var auxVector = Vector<double>.Build.Dense(
             p.Constraints + additionalVariables, 
-            i => i < p.Constraints ? p.b[i] : 0.0
+            i => i < m ? b[i] : 0.0
         ); 
         var auxCost = Vector<double>.Build.Dense(
             p.Dimension + additionalVariables, 
-            i => i >= p.Dimension ? -1.0 : 0.0
+            i => i >= n ? -1.0 : 0.0
         );
 
         var auxProblem = new Problem(auxCost, auxMatrix, auxVector);
@@ -165,6 +188,6 @@ public class PrimalSimplex : IterativeSolver, ISimplex
                 "The auxiliary problem should have returned a primal feasible vertex " +
                 "for the original problem"
             );
-        return newVertex;
+        return (newVertex, auxSolution.IterationCount);
     }
 }

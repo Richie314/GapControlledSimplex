@@ -2,7 +2,13 @@ namespace Gap_Controlled_Simplex.Solvers;
 
 public class CrissCross : IterativeSolver
 {
-    public override Solution? Maximize(Problem problem, int[]? B = null)
+    public override (Vertex? v, int initialIterations) 
+        GetStartingPoint(in Problem p, int[]? givenBasis = null)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override Solution? Maximize(in Problem problem, int[]? B = null)
     {
         var allIndices = Enumerable.Range(0, problem.Dimension).ToArray();
         B ??= allIndices;

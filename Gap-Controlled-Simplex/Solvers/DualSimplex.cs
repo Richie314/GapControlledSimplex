@@ -7,56 +7,41 @@ public class DualSimplex : IterativeSolver, ISimplex
         if (!v.IsDualFeasible())
             return null;
         
-        if (v.IsPrimalFeasible()) // Ax <= b
-        {
-            // Optimal value
-            return v;
-        }
+        if (v.IsPrimalFeasible()) // check Ax <= b
+            return v; // Optimal value reached
 
-        // Entering index
-        int k = v.NonBasis.First(i => v.b[i] < v.A.Row(i) * v.x);
+        // Entering index (Bland rule)
+        var (k, slack) = v
+            .primalInfeasibleRows()
+            .First();
+
+        // Direction
         var Ak = v.A.Row(k);
         
-        // Leaving index
-        int h = int.MaxValue;
-        double t = double.PositiveInfinity;
-        foreach (int i in v.Basis)
-        {
-            var Ak_Wi = Ak * v.W.Column(v.Basis.IndexOf(i));
-            if (Ak_Wi >= 0.0)
-                continue;
+        // Leaving index (Minimum ratio + Bland rule)
+        var (h, tDenom) = v
+            .Basis
+            .Select(i => (i, den: Ak * v.W.Column(v.Basis.IndexOf(i))))
+            .Where(pair => pair.den < -Vertex.AbsoluteTolerance)
+            .OrderBy(pair => -v.y[pair.i] / pair.den)
+            .FirstOrDefault(defaultValue: (-1, 0.0));
 
-            var t_i = -v.y[i] / Ak_Wi;
-            
-            if (t_i < t)
-            {
-                t = t_i;
-                h = i;
-            }
-        }
-
-        if (h == int.MaxValue)
-        {
-            // Unbounded problem
-            return null;
-        }
+        if (h == -1)
+            return null; // Unbounded problem
 
         var newBasis = v.Basis
-            .Where(i => i != h)
+            .Except([h])
             .Append(k);
         return new Vertex(v.Problem, newBasis);
     }
 
 
-    public override Solution? Maximize(Problem p, int[]? StartBasis = null)
+    public override Solution? Maximize(in Problem p, int[]? StartBasis = null)
     {
-        Vertex? current = 
-            StartBasis is not null ? 
-            new(p, StartBasis) : 
-            GetFeasibleVertex(p);
+        var (current, initialIterations) = GetStartingPoint(p, StartBasis);
 
         for (int iterations = 0; 
-            current is not null; 
+            current is not null && checkIterationCount(iterations); 
             current = Iteration(current), iterations++
         ) {
             if (current.IsOptimalPoint())
@@ -64,51 +49,55 @@ public class DualSimplex : IterativeSolver, ISimplex
                 return new Solution()
                 {
                     Point = current,
-                    IterationCount = iterations
+                    IterationCount = iterations,
+                    InitialIterations = initialIterations
                 };
             }
-
-            checkIterationCount(iterations);
         }
 
         return null;
     }
 
-    public Vertex? MakeFeasible(Vertex v)
+    public Vertex? MakeFeasible(in Vertex w)
     {
+        Vertex v = w;
         int n = v.Problem.Dimension;
 
         while (!v.IsDualFeasible())
         {
-            var p = v
+            // Leaving index (Bland rule)
+            var (p, dualSlack) = v
                 .dualInfeasibleValues()
                 .First();
 
-            var d = -v.W * v.A.Row(p.index);
+            // Direction
+            var d = -v.W * v.A.Row(p);
             
-            // Bland rule choice
-            var q = v
+            // Entering index (Minimum coefficient + Bland rule)
+            var (q, pivot) = v
                 .NonBasis
-                .Select(i => new { i, a_pi = v.A.Row(i) * d })
+                .Select(i => (i, v.A.Row(i) * d))
                 .FirstOrDefault(
-                    p => p.a_pi <= -Vertex.AbsoluteTolerance, 
-                    defaultValue: new { i = -1, a_pi = 0.0 }
+                    pair => pair.Item2 <= -Vertex.AbsoluteTolerance, 
+                    defaultValue: (-1, 0.0)
                 );
                 
-            // Largest pivot choice
-            //var q = v
-            //    .NonBasis
-            //    .Select(i => new { i, a_pi = v.A.Row(i) * d })
-            //    .Where(p => p.a_pi <= -Vertex.AbsoluteTolerance)
-            //    .OrderBy(p => Math.Abs(p.a_pi))
-            //    .FirstOrDefault(defaultValue: null);
+#if false
+            // Enetering index (Largest pivot + Bland rule)
+            var (q, pivot) = v
+                .NonBasis
+                .Select(i => (i, v.A.Row(i) * d))
+                .Where(pair => pair.Item2 <= -Vertex.AbsoluteTolerance)
+                .OrderBy(pair => Math.Abs(pair.Item2))
+                .FirstOrDefault(defaultValue: (-1, 0.0));
+#endif
 
-            if (q.i == -1)
+            if (q == -1)
                 throw new Exception("Unbounded problem");
 
             var newBasis = v.Basis
-                .Where(i => i != p.index)
-                .Append(q.i);
+                .Except([p])
+                .Append(q);
 
             v = new Vertex(v.Problem, newBasis);
         }
@@ -116,7 +105,27 @@ public class DualSimplex : IterativeSolver, ISimplex
         return v;
     }
 
-    public Vertex? GetFeasibleVertex(Problem p) =>
-        MakeFeasible(new Vertex(p, Enumerable.Range(0, p.Dimension)));
+    public (Vertex, int)? GetFeasibleVertex(in Problem p)
+    {
+        // TODO: count dual initial iterations too
+        var initialPoint = new Vertex(p, Enumerable.Range(0, p.Dimension));
 
+        var dualFeasiblePoint = MakeFeasible(initialPoint);
+        if (dualFeasiblePoint is null)
+            return null;
+
+        return (dualFeasiblePoint, 0);
+    }
+
+    public override (Vertex? v, int initialIterations) 
+        GetStartingPoint(in Problem p, int[]? givenBasis = null)
+    {
+        if (givenBasis is not null)
+            return (new(p, givenBasis), 0);
+
+        var phaseOneSolution = GetFeasibleVertex(p);
+        if (phaseOneSolution is null)
+            return (null, 0);
+        return phaseOneSolution.Value;
+    }
 }
