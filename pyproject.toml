@@ -1,0 +1,38 @@
+[build-system]
+requires = [ "setuptools >= 80.0.1", "wheel" ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gsimplex"
+version = "1.0.0"
+authors = [
+  { name="Riccardo Ciucci", email="riccardo@ciucci.dev" },
+]
+description = "Implementation of simplex algorithm contrelled by the primal-dual gap"
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+dependencies = [
+    "numpy >= 2.2.0",
+    "aiohttp >= 3.9.0",
+]
+
+[project.scripts]
+gsimplex = "gsimplex.main:__main"
+gsimplex-download-netlib = "gsimplex.benchmarks.netlib:main"
+gsimplex-download-plato = "gsimplex.benchmarks.plato:main"
+
+[project.urls]
+Homepage = "https://github.com/Richie314/GapControlledSimplex"
+Issues = "https://github.com/Richie314/GapControlledSimplex/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+include-package-data = true

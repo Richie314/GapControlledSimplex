@@ -3,3 +3,11 @@
 
 *.$*
 *.tmp
+
+benchmark
+dist
+build
+.env
+*.egg-info
+**/__pycache__/
+**/*.pyc
