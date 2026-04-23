@@ -27,6 +27,7 @@ dependencies = [
 gsimplex = "gsimplex.main:__main"
 gsimplex-demo = "gsimplex.demo:demo"
 gsimplex-download-netlib = "gsimplex.benchmarks.netlib:main"
+gsimplex-emps = "gsimplex.benchmarks.netlib_emps:__main"
 gsimplex-download-plato = "gsimplex.benchmarks.plato:main"
 
 [project.urls]

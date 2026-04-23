@@ -1,12 +1,12 @@
 import argparse
-import pulp
-from pathlib import Path
+import sys
 
 from gsimplex.problem import Problem
 from gsimplex.solvers.solver_interface import ISolver
 from gsimplex.solvers.primal_simplex import PrimalSimplex
 from gsimplex.solvers.dual_simplex import DualSimplex
 from gsimplex.solvers.gap_simplex import GapSimplex
+from gsimplex.tools.parser import ProblemParser
 
 def __main():
     solvers = {
@@ -24,17 +24,14 @@ def __main():
                         help='Algorithm to use to solve the problem')
     args = parser.parse_args()
 
-    solver: ISolver = solvers[args.solver]()
 
-    problem_path = Path(args.problem)
-    if not problem_path.exists():
-        raise FileNotFoundError(f"Problem file not found: {problem_path.absolute()}")
-        
-    
-    variables, problem = pulp.LpProblem.fromMPS(str(problem_path))
-
-    print(f"{variables=}")
+    problem = ProblemParser.load_mps(args.problem)
     print(f"{problem=}")
 
+    solver: ISolver = solvers[args.solver]()
+    print(f"{solver=}")
+
+    return 0
+
 if __name__ == "__main__":
-    __main()
+    sys.exit(__main())

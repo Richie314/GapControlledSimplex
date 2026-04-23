@@ -5,17 +5,18 @@ from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO
 
-from gsimplex.benchmarks.netlib import NetlibMpsExtractor
-
 class Extractor:
     @staticmethod
-    def is_compressed(filepath: str) -> bool:
+    def is_compressed(filepath: str|Path) -> bool:
         path = Path(filepath)
-        return path.suffix.lower() in ['.bz2', '.gz', '.zip', '.mps.netlib', '.netlib']
+        return path.suffix.lower() in ['.bz2', '.gz', '.zip']
     
     @staticmethod
-    def extract_to_stream(filepath: str) -> BinaryIO:
+    def extract_to_stream(filepath: str|Path) -> BinaryIO:
         path = Path(filepath)
+        if not path.exists():
+            raise FileNotFoundError(f"File not found: {path}")
+
         suffix = path.suffix.lower()
         
         with open(filepath, 'rb') as f:
@@ -31,10 +32,6 @@ class Extractor:
                         return BytesIO(zf.read(names[0]))
                     else:
                         raise ValueError("Empty zip file")
-            elif suffix in ['.mps.netlib', '.netlib']:
-                
-                extractor = NetlibMpsExtractor()
-                return extractor.convert(f)
             
             # Not compressed, return file stream
             return open(filepath, 'rb')

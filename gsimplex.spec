@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ["src/gsimplex/__main__.py"],
+    ["src/gsimplex/main.py"],
     pathex=["src"],
     binaries=[],
     datas=[],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='speck',
+    name='gsimplex',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

@@ -11,17 +11,26 @@ class Downloader:
         else:
             self._benchmark_dir = Path(benchmark_dir)
 
-    async def download_async(self, url: str, filename: str) -> Optional[str]:
+    async def download_async(self, 
+                             url: str, 
+                             filename: str, 
+                             cached_filename: Optional[str] = None,
+                             ) -> Optional[str]:
         
         # Make sure the benchmark directory exists
         self._benchmark_dir.mkdir(parents=True, exist_ok=True)
+
+        if not cached_filename:
+            cached_filename = filename
+
         filepath = self._benchmark_dir / filename
+        cached_filepath = self._benchmark_dir / cached_filename
         
         # If already downloaded, return it
-        if filepath.exists():
+        if cached_filepath.exists():
             if not self._quiet:
-                print(f"Using cached: {filename}")
-            return str(filepath)
+                print(f"Using cached: {cached_filename}")
+            return str(cached_filepath)
         
         if not self._quiet:
             print(f"Downloading: {url}...")
@@ -49,13 +58,18 @@ class Downloader:
                     pass
             return None
 
-    async def download_many_async(self, files: List[Tuple[str, str, str]]) -> Dict[str, str]:
-        tasks = [self.download_async(url, filename) for url, _, filename in files]
+    async def download_many_async(self, 
+                                  files: List[Tuple[str, str, str, Optional[str]]], 
+                                  post_process=None,
+                                  ) -> Dict[str, str]:
+        tasks = [self.download_async(url, filename, cached_filename) for url, problem_name, filename, cached_filename in files]
         results = await asyncio.gather(*tasks)
         
         problem_files = {}
-        for (url, problem_name, filename), path in zip(files, results):
+        for (url, problem_name, filename, cached_filename), path in zip(files, results):
             if path:
+                if post_process is not None:
+                    path = post_process(path)
                 problem_files[problem_name] = path
         
         return problem_files

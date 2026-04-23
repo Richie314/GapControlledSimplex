@@ -3,169 +3,38 @@
 import asyncio
 import sys
 import argparse
-from io import BytesIO, StringIO
-from typing import Dict, BinaryIO, List, Optional
+from typing import Dict, List, Optional, Tuple
+from pathlib import Path
 
 from gsimplex.benchmarks.downloader import Downloader
-
+from gsimplex.benchmarks.netlib_emps import expand_mps
 
 class NetLibDownloader(Downloader):
     BASE_URL = "https://www.netlib.org/lp/data/"
     
     async def download_netlib_benchmarks_async(self, problem_names: List[str]) -> Dict[str, str]:
-        files = [
-            (f"{self.BASE_URL}{name}", name, f"netlib/{name}.mps.netlib")
+        files: List[Tuple[str, str, str, Optional[str]]] = [
+            (f"{self.BASE_URL}{name}", name, f"netlib/{name}.mps.netlib", f"netlib/{name}.mps")
             for name in problem_names
             if name.strip()
         ]
-        return await self.download_many_async(files)
+        return await self.download_many_async(files, post_process=NetLibDownloader.post_process_download)
+    
+    @staticmethod
+    def post_process_download(netlib_mps_file: str|Path) -> str:
+        downloaded_file = Path(netlib_mps_file)
+        if not downloaded_file.exists():
+            raise FileNotFoundError(f"Downloaded file path mismatch: {downloaded_file} not found!")
+        
+        download_dir = downloaded_file.parent
+        target_file = download_dir / downloaded_file.name.removesuffix('.netlib')
 
-class NetlibMpsExtractor:
-    TR_TAB = "!\"#$%&'()*+,-./0123456789;<=>?@" + \
-             "ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`" + \
-             "abcdefghijklmnopqrstuvwxyz{|}~"
-    
-    def __init__(self):
-        self._inv_tr_tab = [92] * 256
-        for i, char in enumerate(self.TR_TAB):
-            self._inv_tr_tab[ord(char)] = i
-        
-        self.output_only_one_nonzero = False
-        self.blank_replacement = None
-        self.keep_mystery_lines = True
-    
-    def convert(self, input_stream: BinaryIO) -> BinaryIO:
-        output_stream = BytesIO()
-        reader = StringIO(input_stream.read().decode('ascii', errors='ignore'))
-        writer = StringIO()
-        
-        try:
-            self._process(reader, writer)
-            writer.seek(0)
-            output_stream.write(writer.read().encode('ascii'))
-            output_stream.seek(0)
-            return output_stream
-        except Exception as e:
-            raise Exception(f"Conversion failed: {e}")
-    
-    def _process(self, reader: StringIO, writer: StringIO):
-        line = reader.readline()
-        while line and not line.startswith("NAME"):
-            line = reader.readline()
-        
-        if not line:
-            return
-        
-        # NAME Line
-        writer.write(line)
-        
-        # Problem Statistics
-        stats1 = reader.readline()
-        stats2 = reader.readline()
-        s1 = stats1.split()
-        s2 = stats2.split()
-        
-        nrow = int(s1[0])
-        ncol = int(s1[1])
-        nz = int(s1[3])
-        rhsnz = int(s1[5])
-        ranz = int(s1[7])
-        bdnz = int(s2[1])
-        ns = int(s2[2])
-        
-        # Load Number Table
-        number_table = [""] * (ns + 1)
-        data_buffer = ""
-        for i in range(1, ns + 1):
-            if not data_buffer:
-                data_buffer = reader.readline().strip()
-            number_table[i] = self._expand_floating_point(data_buffer)
-        
-        # Row Names
-        name_map: Dict[int, str] = {}
-        for i in range(1, nrow + 1):
-            row_line = reader.readline()
-            if i == 1:
-                writer.write("ROWS\n")
-            
-            row_type = row_line[0]
-            name = row_line[1:].strip()
-            if self.blank_replacement:
-                name = name.replace(' ', self.blank_replacement)
-            
-            writer.write(f" {row_type}  {name}\n")
-            name_map[i] = name
-        
-        # COLUMNS, RHS, RANGES, BOUNDS
-        self._process_section(reader, writer, "COLUMNS", nz, 1, name_map, number_table, nrow)
-        self._process_section(reader, writer, "RHS", rhsnz, 2, name_map, number_table, nrow)
-        self._process_section(reader, writer, "RANGES", ranz, 3, name_map, number_table, nrow)
-        self._process_section(reader, writer, "BOUNDS", bdnz, 4, name_map, number_table, nrow)
-        
-        writer.write("ENDATA\n")
-    
-    def _process_section(self, reader: StringIO, writer: StringIO, head: str, nz: int, section_type: int, names: Dict[int, str], num_table: list, nrow: int):
-        if nz == 0 and section_type > 2:
-            return
-        writer.write(f"{head}\n")
-        
-        current_column = ""
-        data_line = ""
-        
-        for _ in range(nz):
-            if not data_line:
-                data_line = reader.readline().strip()
-            
-            index = self._expand_index(data_line)
-            if index == 0:  # New Column header
-                current_column = data_line.strip()
-                if self.blank_replacement:
-                    current_column = current_column.replace(' ', self.blank_replacement)
-                data_line = reader.readline().strip()
-                index = self._expand_index(data_line)
-            
-            row_name = names.get(index, f"ROW{index}")
-            value = self._expand_floating_point(data_line)
-            
-            writer.write(f"    {current_column:<8}  {row_name:<8}  {value:>15}\n")
-    
-    def _expand_index(self, s: str) -> int:
-        if not s:
-            return 0
-        
-        k = self._inv_tr_tab[ord(s[0])]
-        s = s[1:]
-        
-        if k >= 23:
-            return k - 23
-        
-        x = k
-        while True:
-            if not s:
-                break
-            k = self._inv_tr_tab[ord(s[0])]
-            s = s[1:]
-            x = x * 46 + k
-            if k >= 46:
-                return x - 46
-        
-        return x
-    
-    def _expand_floating_point(self, s: str) -> str:
-        if not s:
-            return "0.0"
-        
-        k = self._inv_tr_tab[ord(s[0])]
-        if k < 46:
-            idx = self._expand_index(s[1:])
-            # In the original C# code, this would look up in number_table
-            # For simplicity, return the index as string
-            return str(idx)
-        
-        # Complex floating point expansion would go here
-        # For now, return a placeholder
-        return "0.0"
-    
+        expand_mps(str(downloaded_file), str(target_file))
+        downloaded_file.unlink()
+
+        assert target_file.exists()
+        return str(target_file)
+  
 async def download_netlib_benchmarks(dir: Optional[str] = None, quiet: bool = False) -> bool:
     downloader = NetLibDownloader(benchmark_dir=dir, quiet=quiet)
     
