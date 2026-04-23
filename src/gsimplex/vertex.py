@@ -18,7 +18,7 @@ class Vertex:
         if len(self.basis) != problem.dimension:
             raise ValueError("Basis must have same size as problem dimension")
 
-        A_B = self._get_A_B(problem.A, self.basis)
+        A_B = problem.A[self.basis, :]
         b_B = problem.b[self.basis]
 
         self.W = -np.linalg.inv(A_B)
@@ -28,10 +28,6 @@ class Vertex:
 
         # y_B = c^T A_B^-1
         self.y_B = np.linalg.solve(A_B.T, problem.c)
-
-    @staticmethod
-    def _get_A_B(A: np.ndarray, basis: np.ndarray) -> np.ndarray:
-        return A[basis, :]
 
     @property
     def non_basis(self) -> np.ndarray:

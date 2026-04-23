@@ -109,19 +109,18 @@ class PrimalSimplex(IterativeSolver, ISimplex):
         rp = initial_vertex.primal_residuals()
         V = initial_vertex.non_basis[rp[initial_vertex.non_basis] < 0]
 
-        additional_vars = len(V)
+        # Number of auxiliary variables
+        k = len(V)
 
-        aux_A = np.zeros((m + additional_vars, n + additional_vars))
+        # Build matrix of the auxiliary problem
+        aux_A = np.zeros((m + k, n + k))
         aux_A[:m, :n] = problem.A
-
+        aux_A[m:, n:] = -np.eye(k)
         for idx, i in enumerate(V):
-            aux_A[m + idx, n + idx] = -1
-            row_idx = np.where(initial_vertex.non_basis == i)[0][0]
-            if row_idx < len(V):
-                aux_A[i, n + row_idx] = -1
+            aux_A[i, n + idx] = -1
 
-        aux_b = np.concatenate([problem.b, np.zeros(additional_vars)])
-        aux_c = np.concatenate([np.zeros(n), -np.ones(additional_vars)])
+        aux_b = np.concatenate([problem.b, np.zeros(k)])
+        aux_c = np.concatenate([np.zeros(n), -np.ones(k)])
 
         aux_problem = Problem(aux_c, aux_A, aux_b)
 

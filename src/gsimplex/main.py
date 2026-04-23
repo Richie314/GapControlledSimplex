@@ -25,7 +25,7 @@ def __main():
     args = parser.parse_args()
 
 
-    problem = ProblemParser.load_mps(args.problem)
+    problem = ProblemParser.load_mps_from_file(args.problem)
     print(f"{problem=}")
 
     solver: ISolver = solvers[args.solver]()

@@ -13,5 +13,8 @@ class IterativeSolver(ISolver, ABC):
         return self.max_iterations is None or iterations <= self.max_iterations
 
     @abstractmethod
-    def get_starting_point(self, problem: Problem, given_basis: Optional[list[int]] = None) -> Tuple[Optional[Vertex], int]:
+    def get_starting_point(self, 
+                           problem: Problem, 
+                           given_basis: Optional[list[int]] = None
+                           ) -> Tuple[Optional[Vertex], int]:
         pass
