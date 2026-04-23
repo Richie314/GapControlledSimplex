@@ -1,3 +1,5 @@
+import numpy as np
+
 from gsimplex.problem import Problem
 from gsimplex.vertex import Vertex
 from gsimplex.solvers.solver_interface import ISolver
