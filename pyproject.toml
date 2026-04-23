@@ -34,6 +34,9 @@ gsimplex-download-plato = "gsimplex.benchmarks.plato:main"
 Homepage = "https://github.com/Richie314/GapControlledSimplex"
 Issues = "https://github.com/Richie314/GapControlledSimplex/issues"
 
+[project.optional-dependencies]
+dev = ["pytest"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
