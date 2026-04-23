@@ -25,6 +25,7 @@ class Downloader:
         
         if not self._quiet:
             print(f"Downloading: {url}...")
+        filepath.parent.mkdir(parents=True, exist_ok=True)
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:

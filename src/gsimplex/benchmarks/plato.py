@@ -18,12 +18,6 @@ class PlatoDownloader(Downloader):
             if name.strip()
         ]
         return await self.download_many_async(files)
-    
-    def get_problem_file(self, problem: str) -> Optional[str]:
-        path = self._benchmark_dir / "plato" / f"{problem}.mps.bz2"
-        if path.exists():
-            return str(path)
-        return None
 
 async def download_plato_benchmarks(dir: Optional[str] = None, quiet: bool = False) -> bool:
     downloader = PlatoDownloader(benchmark_dir=dir, quiet=quiet)
@@ -51,7 +45,7 @@ async def download_plato_benchmarks(dir: Optional[str] = None, quiet: bool = Fal
 def main():
     parser = argparse.ArgumentParser(description="Download Plato benchmarks")
     parser.add_argument('--quiet', action='store_true', help='Run in quiet mode')
-    parser.add_argument('--dir', type=str, default='benchmark/plato', help='Directory to save benchmarks')
+    parser.add_argument('--dir', type=str, default=None, help='Directory to save benchmarks')
     args = parser.parse_args()
 
     esit = asyncio.run(download_plato_benchmarks(quiet=args.quiet, dir=args.dir))

@@ -5,6 +5,8 @@
 *.tmp
 
 benchmark
+benchmark.bak
+
 dist
 build
 .env

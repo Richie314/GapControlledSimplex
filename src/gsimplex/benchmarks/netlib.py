@@ -199,7 +199,7 @@ async def download_netlib_benchmarks(dir: Optional[str] = None, quiet: bool = Fa
 def main():
     parser = argparse.ArgumentParser(description="Download Netlib benchmarks")
     parser.add_argument('--quiet', action='store_true', help='Run in quiet mode')
-    parser.add_argument('--dir', type=str, default='benchmark/netlib', help='Directory to save benchmarks')
+    parser.add_argument('--dir', type=str, default=None, help='Directory to save benchmarks')
     args = parser.parse_args()
 
     esit = asyncio.run(download_netlib_benchmarks(quiet=args.quiet, dir=args.dir))

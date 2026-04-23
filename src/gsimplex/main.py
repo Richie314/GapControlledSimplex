@@ -1,54 +1,40 @@
+import argparse
+import pulp
+from pathlib import Path
+
 from gsimplex.problem import Problem
 from gsimplex.solvers.solver_interface import ISolver
 from gsimplex.solvers.primal_simplex import PrimalSimplex
 from gsimplex.solvers.dual_simplex import DualSimplex
 from gsimplex.solvers.gap_simplex import GapSimplex
 
-def solve_and_print(solver: ISolver, problem: Problem, B: list[int]|None = None):
-    solution = None
-    try:
-        solution = solver.maximize(problem, B)
-    except Exception as e:
-        print(str(e))
-        return
-
-    if solution is None:
-        print("Problem is unbounded or infeasible")
-        return
-
-    print(f"x = [{'; '.join(map(str, solution.x))}]")
-    print(f"y = [{'; '.join(map(str, solution.y))}]")
-
-    try:
-        print(f"c^T * x = {solution.point.primal_value()}")
-    except Exception as e:
-        print(str(e))
-
-    try:
-        print(f"y^T * b = {solution.point.dual_value()}")
-    except Exception as e:
-        print(str(e))
-
 def __main():
-    problem = Problem.from_ab_rows(
-        [4.0, 5.0, 2.0],
-        [0.0, 0.6, 0.8, 500.0],
-        [-1.0, 2.0, 0.0, 0.0],
-        [1.0, 0.0, -1.0, 0.0]
-    ).enforce_positivity()
+    solvers = {
+        'gsimplex' : GapSimplex,
+        'psimplex': PrimalSimplex,
+        'dsimplex': DualSimplex,
+    }
 
-    print("=== Primal Simplex ===")
-    solve_and_print(PrimalSimplex(), problem, B=[0, 3, 4])
-    print()
-    print()
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument('--quiet', action='store_true', 
+                        help='Run in quiet mode')
+    parser.add_argument('--problem', type=str, required=True, 
+                        help='Name of the problem to solve or path to it')
+    parser.add_argument('--solver', default='gsimplex', type=str, choices=solvers.keys(), 
+                        help='Algorithm to use to solve the problem')
+    args = parser.parse_args()
 
-    print("=== Dual Simplex ===")
-    solve_and_print(DualSimplex(), problem)
-    print()
-    print()
+    solver: ISolver = solvers[args.solver]()
 
-    print("=== Gap-Controlled Simplex ===")
-    solve_and_print(GapSimplex(), problem, B=[0, 3, 4])
+    problem_path = Path(args.problem)
+    if not problem_path.exists():
+        raise FileNotFoundError(f"Problem file not found: {problem_path.absolute()}")
+        
+    
+    variables, problem = pulp.LpProblem.fromMPS(str(problem_path))
+
+    print(f"{variables=}")
+    print(f"{problem=}")
 
 if __name__ == "__main__":
     __main()
