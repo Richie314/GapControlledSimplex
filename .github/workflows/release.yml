@@ -10,15 +10,13 @@ on:
 
 jobs:
   release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PAT }}
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -49,3 +47,4 @@ jobs:
           tag_name: "v${{ inputs.version }}"
           name: "v${{ inputs.version }}"
           generate_release_notes: true  # Auto-generates notes
+          token: ${{ secrets.RELEASE_PAT }}
