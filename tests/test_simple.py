@@ -74,7 +74,7 @@ test_data = [
 def test_primal_simplex(test_case):
     solver = PrimalSimplex()
     test_case.test(solver, use_starting_basis=True)
-    # test_case.test(solver, use_starting_basis=False)
+    test_case.test(solver, use_starting_basis=False)
 
 @pytest.mark.parametrize("test_case", test_data)
 def test_dual_simplex(test_case):
