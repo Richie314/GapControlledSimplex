@@ -11,5 +11,5 @@ class ISimplex(ISolver, ABC):
         pass
 
     @abstractmethod
-    def make_feasible(self, vertex: Vertex) -> Optional[Vertex]:
+    def make_feasible(self, vertex: Vertex) -> Tuple[Vertex, int]:
         pass

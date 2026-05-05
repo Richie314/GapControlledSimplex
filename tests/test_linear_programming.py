@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union, List, Optional
 from pulp import LpProblem, LpConstraint
-from pulp.constants import LpSolutionOptimal
+from pulp.constants import LpSolutionOptimal, LpMaximize
 from pathlib import Path
 
 from gsimplex.vertex import Vertex, DEFAULT_ABS_TOLERANCE
@@ -13,7 +13,7 @@ class LinearProgrammingTest:
                  filename: Union[Path, str],
                  expected_solution: Optional[Union[np.ndarray, List[float]]] = None, 
                  expected_value: Optional[float] = None,
-                 basis: Optional[Union[Vertex, List[LpConstraint]]] = None
+                 basis: Optional[Union[Vertex, List[LpConstraint]]] = None,
                  ):
         self.expected_solution = np.array(expected_solution) if expected_solution is not None else None
         self.expected_value = expected_value
@@ -22,7 +22,7 @@ class LinearProgrammingTest:
         filename = Path("tests") / filename
         assert filename.exists(), f"Problem {filename} not found!"
 
-        self.problem: LpProblem = ProblemParser.load_mps_from_file(filename)
+        self.problem: LpProblem = ProblemParser.load_mps_from_file(filename, sense=LpMaximize)
         assert self.problem.numConstraints() >= self.problem.numVariables()
 
         if self.basis is not None:
@@ -32,6 +32,9 @@ class LinearProgrammingTest:
             assert self.problem.numVariables() == len(self.expected_solution)
             #if self.expected_value is None:
             #    self.expected_value = self.problem.c @ self.expected_solution
+
+        for constraint in list(self.problem.constraints.values()):
+            assert constraint.name
 
     def test(self, solver: ISolver):
         self.problem.solve(solver, start_basis=self.basis)

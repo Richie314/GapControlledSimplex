@@ -1,8 +1,4 @@
-from pulp.constants import (
-    LpStatusNotSolved, LpStatusOptimal, 
-    LpStatusUnbounded, LpStatusInfeasible,
-    LpStatusUndefined
-)
+from pulp.constants import LpStatusNotSolved, LpStatusUnbounded, LpStatusInfeasible
 
 class GsimplexException(Exception):
     def __init__(self, *args: object):
@@ -25,3 +21,7 @@ class InvalidBasisException(GsimplexException):
         super().__init__(*args)
         self.status = LpStatusNotSolved
 
+class IterationLimitReachedException(GsimplexException):
+    def __init__(self, *args: object):
+        super().__init__(*args)
+        self.status = LpStatusNotSolved

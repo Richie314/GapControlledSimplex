@@ -32,7 +32,7 @@ class PrimalSimplex(IterativeSolver, ISimplex):
         Wh = vertex.W[:, h_idx]
         print(f"{h=}, {Wh=}")
 
-        ratios = []
+        ratios: List[Tuple[LpConstraint, float]] = []
         for constraint in vertex.non_basis:
             Ai = Vertex.constraint_to_row(constraint, vertex.problem)
             slack = Vertex.slack(constraint)
@@ -50,19 +50,12 @@ class PrimalSimplex(IterativeSolver, ISimplex):
 
         return vertex.swap(k, h)
 
-    def get_starting_point(self, 
-                           problem: LpProblem, 
-                           given_basis: Optional[Union[List[LpConstraint], Vertex]] = None
-                           ) -> Tuple[Optional[Vertex], int]:
-        if given_basis is not None:
-            if isinstance(given_basis, Vertex):
-                return given_basis, 0
-            return Vertex(problem, *given_basis), 0
+    def get_starting_point(self, problem: LpProblem) -> Tuple[Optional[Vertex], int]:
 
-        feasible = self.get_feasible_vertex(problem)
-        if feasible is None:
+        try:
+            return self.get_feasible_vertex(problem)
+        except GsimplexException:
             return None, 0
-        return feasible
 
     def maximize(self, 
                  problem: LpProblem, 
@@ -71,14 +64,22 @@ class PrimalSimplex(IterativeSolver, ISimplex):
 
         iterations = 0
         try:
-            current, _ = self.get_starting_point(problem, start_basis)
-            if current is None:
+            if start_basis is None:
+                start_basis, iterations = self.get_starting_point(problem)
+
+            if start_basis is None:
                 raise UnFeasibleProblemException
+            
+            if not isinstance(start_basis, Vertex):
+                start_basis = Vertex(problem, *start_basis)
         
-            while self._check_iteration_count(iterations):
+            current = start_basis
+            while True:
                 if current.is_optimal_point():
                     problem.status = LpStatusOptimal
                     return
+                
+                self._check_iteration_count(iterations)
                 
                 print(f"{current.x=}")
                 current = self.iteration(current)
@@ -88,39 +89,44 @@ class PrimalSimplex(IterativeSolver, ISimplex):
             print(e)
             problem.status = e.status
 
-    def make_feasible(self, vertex: Vertex) -> Optional[Vertex]:
-        v = vertex
+    def make_feasible(self, vertex: Vertex) -> Tuple[Vertex, int]:
+
+        iterations = 0
         while True:
 
-            infeas = v.primal_infeasible_rows()
+            infeas = vertex.primal_infeasible_rows()
             if len(infeas) == 0:
                 break
 
+            self._check_iteration_count(iterations)
+
             k, _ = min(infeas, key=lambda x: x[1])
-            Ak = Vertex.constraint_to_row(k, v.problem)
+            Ak = Vertex.constraint_to_row(k, vertex.problem)
 
             # Leaving index (Bland rule)
             h = None
-            for constraint in v:
-                idx = v.index(constraint)
-                if Ak @ v.W[:, idx] < 0:
+            for constraint in vertex:
+                idx = vertex.index(constraint)
+                if Ak @ vertex.W[:, idx] < 0:
                     h = constraint
                     break
+
             if h is None:
-                return None
+                raise UnboundedProblemException
 
-            v = v.swap(k, h)
+            vertex.swap(k, h)
+            iterations += 1
 
-        return v
+        return vertex, iterations
     
-    def get_auxiliary_problem(self, original: LpProblem) -> Tuple[Optional[LpProblem], Vertex]:
+    def get_auxiliary_problem(self, original: LpProblem) -> Tuple[LpProblem, Vertex]:
         n = original.numVariables()
 
         initial_basis = list(original.constraints.values())[:n]
         initial_vertex = Vertex(original, *initial_basis)
 
         if initial_vertex.is_primal_feasible():
-            return None, initial_vertex
+            return original, initial_vertex
 
         # Auxiliary problem
         rp = initial_vertex.primal_residuals()
@@ -145,25 +151,28 @@ class PrimalSimplex(IterativeSolver, ISimplex):
             if j is None:
                 copy = constraint.copy()
                 if constraint in initial_basis:
-                    copy.name = f"ori_{constraint.name}"
-                
+                    copy.name = f"_B_{constraint.name}"
+                else:
+                    copy.name = f"_U_{constraint.name}"
+
                 aux_problem += copy
                 continue
 
+            variable: LpVariable = aux_vars[j]
             new_constraint_sub = None
             new_constraint_add = None
             
             if constraint.sense == LpConstraintLE or constraint.sense == LpConstraintEQ:
                 # Ai @ x - s <= bi || Ai @ x - s == bi
                 new_constraint_sub = constraint.copy()
-                new_constraint_sub.name = f"aux_{constraint.name}_sub"
-                new_constraint_sub -= aux_vars[j]
+                new_constraint_sub.name = f"_VS_{constraint.name}"
+                new_constraint_sub.subInPlace(variable)
 
             if constraint.sense == LpConstraintGE or constraint.sense == LpConstraintEQ:
                 # Ai @ x + s >= bi || Ai @ x + s == bi
                 new_constraint_add = constraint.copy()
-                new_constraint_add.name = f"aux_{constraint.name}_add"
-                new_constraint_add += aux_vars[j]
+                new_constraint_add.name = f"_VA_{constraint.name}"
+                new_constraint_add.addInPlace(variable)
 
             if new_constraint_sub:
                 aux_problem += new_constraint_sub
@@ -174,7 +183,7 @@ class PrimalSimplex(IterativeSolver, ISimplex):
         aux_vertex = Vertex(
             aux_problem,
             *[c for c in aux_problem.constraints.values() 
-              if c.name and (c.name.startswith("aux_") or c.name.startswith("ori_"))]
+              if c.name and (c.name.startswith("_VS_") or c.name.startswith("_VA_") or c.name.startswith("_B_"))]
         )
 
         return aux_problem, aux_vertex
@@ -182,23 +191,32 @@ class PrimalSimplex(IterativeSolver, ISimplex):
     def get_feasible_vertex(self, problem: LpProblem) -> Tuple[Vertex, int]:
         n = problem.numVariables()
 
-        aux_problem, initial_vertex = self.get_auxiliary_problem(problem)
-        if not aux_problem:
-            return initial_vertex, 0
+        aux_problem, aux_vertex = self.get_auxiliary_problem(problem)
+        if aux_problem == problem:
+            return aux_vertex, 0
 
-        assert aux_problem.objective is not None
-        aux_problem.solve(solver=self, start_basis=initial_vertex)
+        aux_problem.solve(solver=self, start_basis=aux_vertex)
         if aux_problem.status != LpStatusOptimal:
             raise UnFeasibleProblemException # Auxiliary problem unfeasible or unbounded
         
+        assert aux_problem.objective is not None
         aux_value = aux_problem.objective.value()
         if aux_value is None or aux_value > DEFAULT_ABS_TOLERANCE:
             raise UnboundedProblemException # Slack variables should be zero at optimality
 
+        aux_solution = Vertex.from_problem_state(aux_problem)
+        assert len(aux_solution) >= n
+ 
+        feasible_solution_constraints = [
+            c for c in problem.constraints.values()
+            if aux_solution.has_named_constraints([
+                f"_B_{c.name}", 
+                f"_U_{c.name}", 
+                f"_VS_{c.name}", 
+                f"_VA_{c.name}",
+            ])
+        ]
+        assert len(feasible_solution_constraints) == n, "Selected constraint count mismatch"
 
-        return initial_vertex, 0
-        '''
-
-        return new_vertex, 0
-
-        '''
+        feasible_solution = Vertex(problem, *feasible_solution_constraints)
+        return feasible_solution, 0

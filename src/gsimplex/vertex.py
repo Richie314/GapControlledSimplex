@@ -22,6 +22,21 @@ class Vertex(Basis):
         self.x
 
     @staticmethod
+    def from_problem_state(p: LpProblem, eps: float = DEFAULT_ABS_TOLERANCE) -> "Vertex":
+        assert eps >= 0, "Eps must be >= 0"
+
+        return Vertex(p,
+                      *[c for c in list(p.constraints.values())
+                        if abs(Vertex.slack(c)) < 2*eps])
+    
+    def has_named_constraints(self, names: List[str]) -> bool:
+        for c in self:
+            if c.name in names:
+                return True
+            
+        return False
+
+    @staticmethod
     def slack(constraint: LpConstraint) -> float:
         """Given the constraint Ai, returns bi - Ai*x"""
 

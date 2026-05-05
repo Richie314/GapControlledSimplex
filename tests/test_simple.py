@@ -5,19 +5,6 @@ from gsimplex.solvers.dual_simplex import DualSimplex
 from gsimplex.solvers.gap_simplex import GapSimplex
 
 
-'''
-    LinearProgrammingTest(
-        filename="demo/2.mps",
-        expected_solution=[7, 3, 59.0/12],
-        # basis=[3, 6, 7],
-    ),
-    LinearProgrammingTest(
-        filename="demo/4.mps",
-        expected_solution=[1000.0/3, 2000.0/3],
-        # basis=[0, 4],
-    ),
-'''
-
 test_data = [
     LinearProgrammingTest(
         filename="demo/1.mps",
@@ -25,9 +12,19 @@ test_data = [
         # basis=[0, 3, 4],
     ),
     LinearProgrammingTest(
+        filename="demo/2.mps",
+        expected_solution=[7, 3, 59.0/12],
+        # basis=[3, 6, 7],
+    ),
+    LinearProgrammingTest(
         filename="demo/3.mps",
         expected_solution=[650.0/29, 1300.0/29, 1800.0/29],
         # basis=[1, 5, 6],
+    ),
+    LinearProgrammingTest(
+        filename="demo/4.mps",
+        expected_solution=[1000.0/3, 2000.0/3],
+        # basis=[0, 4],
     ),
     LinearProgrammingTest(
         filename="demo/5.mps",
@@ -49,13 +46,18 @@ test_data = [
 
 @pytest.mark.parametrize("test_case", test_data)
 def test_dual_simplex(test_case):
-    solver = DualSimplex()
+    solver = DualSimplex(max_iterations=20)
     test_case.test(solver)
 
 '''
 @pytest.mark.parametrize("test_case", test_data)
 def test_primal_simplex(test_case):
     solver = PrimalSimplex()
+    test_case.test(solver)
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_dual_simplex(test_case):
+    solver = DualSimplex(max_iterations=20)
     test_case.test(solver)
 
 @pytest.mark.parametrize("test_case", test_data)

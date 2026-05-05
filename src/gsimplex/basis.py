@@ -119,7 +119,7 @@ class Basis(ConstraintSet):
 
         self.n = problem.numVariables()
         assert self.n > 0, "Problem must have at least one variable"
-        assert len(self) == self.n, "Basis must have same number of constraints as problem dimension"
+        assert len(self) == self.n, f"Basis must have same number of constraints as problem dimension: {len(self)} != {self.n}"
 
         self.problem = problem
         self.variables = self.problem.variables().copy()
