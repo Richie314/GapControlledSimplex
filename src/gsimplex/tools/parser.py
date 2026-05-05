@@ -9,7 +9,7 @@ class ProblemParser:
 
     @staticmethod
     def __load_mps_file(file_path: str|Path) -> pl.LpProblem:
-        _, problem = pl.LpProblem.fromMPS(str(file_path))
+        _, problem = pl.LpProblem.fromMPS(str(file_path), pl.constants.LpMaximize)
         return problem
 
     @staticmethod

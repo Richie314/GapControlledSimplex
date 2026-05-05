@@ -1,102 +1,119 @@
-import numpy as np
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, Union, List
+from pulp import (
+    LpProblem, LpConstraint,
+    LpStatusNotSolved, LpStatusOptimal, 
+    LpStatusUnbounded, LpStatusInfeasible,
+)
 
 from gsimplex.solvers.iterative_solver import IterativeSolver
 from gsimplex.solvers.simplex_interface import ISimplex
-from gsimplex.problem import Problem
-from gsimplex.vertex import Vertex
-from gsimplex.solution import Solution
+from gsimplex.vertex import Vertex, DEFAULT_ABS_TOLERANCE
+from gsimplex.exception import (
+    UnboundedProblemException,
+    UnFeasibleProblemException,
+    GsimplexException,
+)
 
 class DualSimplex(IterativeSolver, ISimplex):
     @staticmethod
-    def iteration(vertex: Vertex) -> Optional[Vertex]:
+    def iteration(vertex: Vertex) -> Vertex:
         if not vertex.is_dual_feasible():
-            return None
+            raise UnFeasibleProblemException
 
-        if vertex.is_primal_feasible():
-            return vertex  # Optimal
-
-        # Entering index (Bland rule)
         infeas = vertex.primal_infeasible_rows()
-        if not infeas:
-            return vertex
+        if len(infeas) == 0:
+            return vertex  # Optimal
+        
+        # Entering constraint (Bland rule): grab the first infeasible constraint
         k, _ = infeas[0]
+        Ak = Vertex.constraint_to_row(k, vertex.problem)
 
-        Ak = vertex.problem.A[k]
-
-        # Leaving index (Minimum ratio + Bland rule)
+        # Leaving constraint (Minimum ratio + Bland rule)
         ratios = []
-        for i in vertex.basis:
-            idx = np.where(vertex.basis == i)[0][0]
+        for constraint in vertex:
+            idx = vertex.index(constraint)
             den = Ak @ vertex.W[:, idx]
-            if den < -Vertex.ABSOLUTE_TOLERANCE:
-                ratios.append((i, -vertex.y[i] / den))
+            if den < -DEFAULT_ABS_TOLERANCE:
+                ratios.append((constraint, -vertex.y[vertex.global_index(constraint)] / den))
 
-        if not ratios:
-            return None  # Unbounded
+        if len(ratios) == 0:
+            raise UnboundedProblemException
 
-        ratios.sort(key=lambda x: x[1])
+        ratios.sort(key=lambda x: (x[1], x[0].name))
         h, _ = ratios[0]
 
-        new_basis = np.setdiff1d(vertex.basis, [h])
-        new_basis = np.append(new_basis, k)
+        return vertex.swap(k, h)
 
-        return Vertex(vertex.problem, new_basis)
-
-    def maximize(self, problem: Problem, start_basis: Optional[List[int]] = None) -> Optional[Solution]:
-        current, initial_iterations = self.get_starting_point(problem, start_basis)
-
+    def maximize(self, 
+                 problem: LpProblem, 
+                 start_basis: Optional[Union[List[LpConstraint], Vertex]] = None
+                 ):
         iterations = 0
-        while current is not None and self._check_iteration_count(iterations):
-            if current.is_optimal_point():
-                return Solution(
-                    point=current,
-                    iteration_count=iterations,
-                    initial_iterations=initial_iterations
-                )
-            current = self.iteration(current)
-            iterations += 1
+        try:
+            
+            current, _ = self.get_starting_point(problem, start_basis)
+            if current is None:
+                raise UnFeasibleProblemException
 
-        return None
 
-    def make_feasible(self, vertex: Vertex) -> Optional[Vertex]:
+            while self._check_iteration_count(iterations):
+                if current.is_optimal_point():
+                    problem.status = LpStatusOptimal
+                    return
+                
+                print(f"{current.x=}")
+                current = self.iteration(current)
+                iterations += 1
+
+        except GsimplexException as e:
+            problem.status = e.status
+
+    def make_feasible(self, vertex: Vertex) -> Vertex:
         v = vertex
-        while not v.is_dual_feasible():
+        while True:
             dual_infeas = v.dual_infeasible_values()
-            if not dual_infeas:
+            if len(dual_infeas) == 0:
                 break
-            p, _ = dual_infeas[0]
 
-            d = -v.W @ v.problem.A[p]
+            p, _ = dual_infeas[0]
+            d = -v.W @ Vertex.constraint_to_row(p, vertex.problem)
 
             # Entering index
             min_pivot = float('inf')
-            q = -1
-            for i in v.non_basis:
-                pivot = v.problem.A[i] @ d
-                if pivot <= -Vertex.ABSOLUTE_TOLERANCE and abs(pivot) < min_pivot:
+            q = None
+            for constraint in v.non_basis:
+                pivot = Vertex.constraint_to_row(constraint, vertex.problem) @ d
+                if pivot <= -DEFAULT_ABS_TOLERANCE and abs(pivot) < min_pivot:
                     min_pivot = abs(pivot)
-                    q = i
+                    q = constraint
 
-            if q == -1:
-                raise ValueError("Unbounded problem")
+            if q is None:
+                raise UnboundedProblemException(vertex.problem)
 
-            new_basis = np.setdiff1d(v.basis, [p])
-            new_basis = np.append(new_basis, q)
-            v = Vertex(v.problem, new_basis)
+            v = v.swap(q, p)
 
         return v
 
-    def get_feasible_vertex(self, problem: Problem) -> Optional[Tuple[Vertex, int]]:
-        initial_point = Vertex(problem, np.arange(problem.dimension))
-        dual_feasible = self.make_feasible(initial_point)
-        if dual_feasible is None:
-            return None
-        return dual_feasible, 0
+    def get_feasible_vertex(self, problem: LpProblem) -> Optional[Tuple[Vertex, int]]:
+        
+        constraints = list(problem.constraints.values())
+        initial_point = Vertex(problem, *constraints[:problem.numVariables()])
 
-    def get_starting_point(self, problem: Problem, given_basis: Optional[List[int]] = None) -> Tuple[Optional[Vertex], int]:
+        try:
+            dual_feasible = self.make_feasible(initial_point)
+            return dual_feasible, 0
+        except GsimplexException:
+            return None
+        
+
+    def get_starting_point(self, 
+                           problem: LpProblem, 
+                           given_basis: Optional[Union[List[LpConstraint], Vertex]] = None
+                           ) -> Tuple[Optional[Vertex], int]:
         if given_basis is not None:
-            return Vertex(problem, given_basis), 0
+            if isinstance(given_basis, Vertex):
+                return given_basis, 0
+            return Vertex(problem, *given_basis), 0
 
         phase_one = self.get_feasible_vertex(problem)
         if phase_one is None:

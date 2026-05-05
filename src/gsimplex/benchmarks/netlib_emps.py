@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 netlib_emps.py - Expand compressed LP programs (netlib format) to MPS format.
 

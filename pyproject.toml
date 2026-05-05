@@ -8,7 +8,7 @@ version = "0.0.2"
 authors = [
   { name="Riccardo Ciucci", email="riccardo@ciucci.dev" },
 ]
-description = "Implementation of simplex algorithm contrelled by the primal-dual gap"
+description = "Implementation of simplex algorithm controlled by the primal-dual gap"
 readme = "README.md"
 requires-python = ">=3.12"
 classifiers = [
@@ -25,7 +25,6 @@ dependencies = [
 
 [project.scripts]
 gsimplex = "gsimplex.main:__main"
-gsimplex-demo = "gsimplex.demo:demo"
 gsimplex-download-netlib = "gsimplex.benchmarks.netlib:main"
 gsimplex-emps = "gsimplex.benchmarks.netlib_emps:__main"
 gsimplex-download-plato = "gsimplex.benchmarks.plato:main"

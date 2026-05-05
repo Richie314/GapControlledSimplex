@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Union
+from pulp import LpProblem, LpConstraint
 
 from gsimplex.solvers.solver_interface import ISolver
-from gsimplex.problem import Problem
 from gsimplex.vertex import Vertex
 
 class IterativeSolver(ISolver, ABC):
@@ -14,7 +14,7 @@ class IterativeSolver(ISolver, ABC):
 
     @abstractmethod
     def get_starting_point(self, 
-                           problem: Problem, 
-                           given_basis: Optional[list[int]] = None
+                           problem: LpProblem, 
+                           given_basis: Optional[Union[List[LpConstraint], Vertex]] = None
                            ) -> Tuple[Optional[Vertex], int]:
         pass

@@ -1,27 +1,50 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List, Union
+from pulp import (
+    LpSolver, LpProblem, LpConstraint, 
+    LpMinimize, LpMaximize,
+)
 
-from gsimplex.problem import Problem
 from gsimplex.vertex import Vertex
-from gsimplex.solution import Solution
+    
+class ISolver(LpSolver, ABC):
+    def __init__(self, 
+                 options: Optional[List] = None, 
+                 *args, 
+                 **kwargs
+                 ):
+        super().__init__(mip=False, 
+                         options=options, 
+                         *args,
+                         **kwargs
+                         )
+        
+    def available(self):
+        """True if the solver is available"""
+        return True
+    
+    def actualSolve(self, lp: LpProblem, **kwargs):
+        """Solve a well formulated lp problem"""
+        
+        assert not lp.isMIP(), "MIP problems are not supported"
+        assert lp.objective is not None, "Objective function must be defined"
+        
+        is_minimization = lp.sense == LpMinimize
+        if is_minimization:
+            # Invert the objective to maximize
+            lp.setObjective(-lp.objective)
+            lp.sense = LpMaximize
 
-class ISolver(ABC):
+        self.maximize(lp, **kwargs)
+        if is_minimization:
+            # Restore the original objective
+            lp.setObjective(-lp.objective)
+            lp.sense = LpMinimize
+
+
     @abstractmethod
-    def maximize(self, problem: Problem, start_basis: Optional[list[int]] = None) -> Optional[Solution]:
+    def maximize(self, 
+                 problem: LpProblem, 
+                 start_basis: Optional[Union[List[LpConstraint], Vertex]] = None
+                 ):
         pass
-
-    def minimize(self, 
-                 problem: Problem, 
-                 start_basis: Optional[list[int]] = None
-                 ) -> Optional[Solution]:
-        
-        inverted_problem = Problem(-problem.c, problem.A, problem.b)
-        result = self.maximize(inverted_problem, start_basis)
-        if result is None:
-            return None
-        
-        # Change back to original problem
-        return Solution(
-            point=Vertex(problem, result.basis),
-            iteration_count=result.iteration_count
-        )

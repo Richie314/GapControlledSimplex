@@ -1,7 +1,6 @@
 import argparse
 import sys
 
-from gsimplex.problem import Problem
 from gsimplex.solvers.solver_interface import ISolver
 from gsimplex.solvers.primal_simplex import PrimalSimplex
 from gsimplex.solvers.dual_simplex import DualSimplex
