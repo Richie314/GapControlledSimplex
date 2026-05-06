@@ -43,8 +43,5 @@ class ISolver(LpSolver, ABC):
 
 
     @abstractmethod
-    def maximize(self, 
-                 problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex]] = None
-                 ):
+    def maximize(self, problem: LpProblem, **kwargs):
         pass

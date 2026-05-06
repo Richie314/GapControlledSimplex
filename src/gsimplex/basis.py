@@ -123,7 +123,6 @@ class Basis(ConstraintSet):
 
         self.problem = problem
         self.variables = self.problem.variables().copy()
-        self._constraint_list = list(self.problem.constraints.values())
 
         self._x: Optional[Union[np.ndarray, List[float]]] = None
         self._y: Optional[Union[np.ndarray, List[float]]] = None
@@ -132,22 +131,20 @@ class Basis(ConstraintSet):
         for i, var in enumerate(self.problem.variables()):
             var.varValue = self.x[i]
 
+    @property
+    def indices(self) -> List[int]:
+        return [self.global_index(c) for c in self]
 
     @property
-    def basis_indices(self) -> np.ndarray:
-        return np.array([self._constraint_list.index(constraint) for constraint in self], dtype=int)
-
-    @property
-    def non_basis_indices(self) -> np.ndarray:
-        return np.array([i for i, constraint in enumerate(self._constraint_list) 
-                         if constraint not in self], dtype=int)
+    def non_basis_indices(self) -> List[int]:
+        return [self.global_index(c) for c in self.non_basis]
     
     @property
     def all_constraints(self) -> List[LpConstraint]:
         return list(self.problem.constraints.values())
 
     def global_index(self, constraint: LpConstraint) -> int:
-        return self._constraint_list.index(constraint)
+        return self.all_constraints.index(constraint)
 
     @property
     def non_basis(self) -> ConstraintSet:

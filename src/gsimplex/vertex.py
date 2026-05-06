@@ -1,9 +1,7 @@
 import numpy as np
 from typing import List, Tuple, Optional
 from pulp import LpProblem, LpConstraint
-from pulp.constants import (
-    LpConstraintEQ, LpConstraintLE, LpConstraintGE,
-)
+from pulp.constants import LpConstraintEQ
 
 from gsimplex.basis import Basis
 
@@ -45,12 +43,7 @@ class Vertex(Basis):
 
         if constraint.sense == LpConstraintEQ:
             return -abs(value)
-        if constraint.sense == LpConstraintLE:
-            return -value
-        if constraint.sense == LpConstraintGE:
-            return value
-        
-        raise Exception
+        return constraint.sense * value
     
     @property
     def primal_value(self) -> float:
@@ -63,7 +56,7 @@ class Vertex(Basis):
         return len(r[r >= -eps]) > self.n
 
     def primal_slacks(self) -> np.ndarray:
-        return np.array([Vertex.slack(constraint) for constraint in self.problem.constraints.values()])
+        return np.array([Vertex.slack(constraint) for constraint in self.all_constraints])
 
     def primal_residuals(self) -> np.ndarray:
         s = self.primal_slacks()
@@ -74,16 +67,13 @@ class Vertex(Basis):
                                      eps: float = DEFAULT_ABS_TOLERANCE
                                      ) -> List[Tuple[LpConstraint, float]]:
         r = self.primal_residuals()
-        return [(constraint, r[i]) for i, constraint in enumerate(self.problem.constraints.values())
+        return [(constraint, r[i]) for i, constraint in enumerate(self.all_constraints)
                 if r[i] < -eps]
 
     def primal_infeasible_rows(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
         r = self.primal_residuals()
         return [(constraint, r[i]) for i, constraint in enumerate(self.problem.constraints.values()) 
                 if r[i] < -eps]
-
-    def dual_infeasible_values(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
-        return self.dual_infeasible_contraints(eps)
 
     def is_primal_feasible(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
         r = self.primal_residuals()
@@ -148,9 +138,9 @@ class Vertex(Basis):
         # Compute the variation in the i-th row of A_B
         delta = Vertex.constraint_to_row(r_new - r_old, problem)
 
-        # Grab the i-th column of W and compute delta^T @ W
-        col_i = W[:, r_index]
-        deltaT_W = delta @ W
+        # Grab the i-th column of A_B^-1 and compute delta^T @ W
+        col_i = -W[:, r_index]
+        deltaT_W = delta @ -W
 
         # 1 + delta^T @ W @ e_i
         denom = 1.0 + deltaT_W[r_index]
@@ -159,9 +149,8 @@ class Vertex(Basis):
             raise ValueError("Updated matrix is singular (denominator ≈ 0).")
 
         # Outer product: col_i @ deltaT_W; Nx1 * 1xN => NxN
-        W_diff = np.outer(col_i, deltaT_W) / denom
-
-        return W - W_diff
+        A_Inv = -W - np.outer(col_i, deltaT_W) / denom
+        return -A_Inv
     
     def swap(self, entering: LpConstraint, exiting: LpConstraint|str):
 

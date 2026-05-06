@@ -1,129 +1,193 @@
-from typing import Optional, Tuple, Union, List
-from pulp import (
-    LpProblem, LpConstraint,
-    LpStatusOptimal,
-)
+from typing import Optional, Tuple, List, Union
+from pulp import LpProblem, LpConstraint
+from pulp.constants import LpStatusOptimal
+import numpy as np
 
-from gsimplex.solvers.iterative_solver import IterativeSolver
-from gsimplex.solvers.simplex_interface import ISimplex
+from gsimplex.solvers.simplex_interface import ISimplex, PivotRule, DEFAULT_PIVOT_RULE
 from gsimplex.vertex import Vertex, DEFAULT_ABS_TOLERANCE
 from gsimplex.exception import (
     UnboundedProblemException,
     UnFeasibleProblemException,
     InvalidBasisException,
+    IterationLimitReachedException,
     GsimplexException,
 )
 
-class DualSimplex(IterativeSolver, ISimplex):
-    def __init__(self, max_iterations: Optional[int] = 1_000):
-        super().__init__()
-        self.max_iterations = max_iterations
+class DualSimplex(ISimplex):
 
-    @staticmethod
-    def iteration(vertex: Vertex) -> Vertex:
-        if not vertex.is_dual_feasible():
-            raise InvalidBasisException
+    def get_leaving_bland(self, 
+                           v: Vertex,
+                           d: Optional[Union[np.ndarray, List[float]]] = None,
+                           ) -> Optional[LpConstraint]:
+        """
+        Bland version of dual ratio test.
+        """
 
-        infeas = vertex.primal_infeasible_rows()
-        if len(infeas) == 0:
-            return vertex  # Optimal
+        return self.get_leaving_dantzig(v, d)
+
+    def get_leaving_dantzig(self, 
+                             v: Vertex,
+                             d: Optional[Union[np.ndarray, List[float]]] = None,
+                             ) -> Optional[LpConstraint]:
+        """
+        Choose entering constraint minimizing ratio:
+            y_j / a_rj   with a_rj < 0
+        """
+
+        assert d is not None, "Direction Ak must be provided"
+        candidates: List[Tuple[LpConstraint, float]] = []
+
+        for i, global_i in enumerate(v.indices):
+
+            den = d @ v.W[:, i]
+            if den > -DEFAULT_ABS_TOLERANCE:
+                continue
+
+            ratio = v.y[global_i] / den
+            candidates.append((v[i], ratio))
+
+        if len(candidates) == 0:
+            return None
+
+        return min(candidates, key=lambda x: x[1])[0]
+
+    def get_entering_bland(self, 
+                          v: Vertex, 
+                          d: Optional[Union[np.ndarray, List[float]]] = None,
+                          ) -> Optional[LpConstraint]:
+        """
+        Smallest index among violated constraints.
+        """
+
+        violations = v.primal_infeasible_contraints()
+        if len(violations) == 0:
+            return None
+
+        return violations[0][0]
+    
+    def get_entering_dantzig(self, 
+                            v: Vertex, 
+                            d: Optional[Union[np.ndarray, List[float]]] = None,
+                            ) -> Optional[LpConstraint]:
+        """
+        Pick most violated primal constraint (most negative slack).
+        """
+
+        violations = v.primal_infeasible_contraints()
+        if len(violations) == 0:
+            return None
+
+        # Most negative residual
+        entering, _ = min(violations, key=lambda x: abs(x[1]))
+        return entering
+
+    def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
+        """
+        Dual simplex direction:
+        corresponds to column of W associated with leaving constraint.
+        """
         
-        # Entering constraint (Bland rule): grab the first infeasible constraint
-        infeas.sort(key=lambda x: x[0].name if x[0].name else "")
-        k, _ = infeas[0]
-        Ak = Vertex.constraint_to_row(k, vertex.problem)
+        return Vertex.constraint_to_row(constraint, v.problem)
 
-        # Leaving constraint (Minimum ratio + Bland rule)
-        ratios: List[Tuple[LpConstraint, float]] = []
-        for constraint in vertex:
-            idx = vertex.index(constraint)
-            den = Ak @ vertex.W[:, idx]
-            if den < -DEFAULT_ABS_TOLERANCE:
-                ratios.append((constraint, -vertex.y[vertex.global_index(constraint)] / den))
-
-        if len(ratios) == 0:
-            raise UnboundedProblemException
-
-        ratios.sort(key=lambda x: (x[1], x[0].name))
-        h, _ = ratios[0]
-
-        return vertex.swap(k, h)
 
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex]] = None
-                 ):
-        iterations = 0
+                 start_basis: Optional[Union[List[LpConstraint], Vertex]] = None,
+                 pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
+                 **kwrags):
+
         try:
+            initial_iterations = 0
             if start_basis is None:
-                start_basis, iterations = self.get_starting_point(problem)
+                start_basis, initial_iterations = self.get_starting_point(problem)
 
             if start_basis is None:
                 raise UnFeasibleProblemException
             
             if not isinstance(start_basis, Vertex):
-                start_basis = Vertex(problem=problem, *start_basis)
+                start_basis = Vertex(problem, *start_basis)
+        
+            if not start_basis.is_dual_feasible():
+                raise UnFeasibleProblemException(
+                    f"#{initial_iterations} Starting point isn't dual-feasible",
+                    start_basis,
+                )
 
             current = start_basis
-            while True:
+            for i in range(initial_iterations, self.max_iterations):
+                if not current.is_dual_feasible():
+                    raise InvalidBasisException(
+                        f"#{i} Current point isn't dual-feasible",
+                        current,
+                    )
                 
                 if current.is_optimal_point():
                     problem.status = LpStatusOptimal
                     return
                 
-                self._check_iteration_count(iterations)
-                
-                print(f"{current.x=}")
-                current = self.iteration(current)
-                iterations += 1
+                # Choose entering constraint
+                entering = self.get_entering_constraint(current, pivot_rule=pivot_rule)
+                assert entering is not None
+            
+                # Calculate the direction
+                direction = self.get_moving_direction(current, entering)
+
+                # Choose leaving constraint
+                leaving = self.get_leaving_constraint(current, d=direction, pivot_rule=pivot_rule)
+                if leaving is None:
+                    raise UnFeasibleProblemException(
+                        f"#{i} Dual simplex detected infeasibility",
+                        problem,
+                    )
+
+                current.swap(entering, leaving)
+
+            raise IterationLimitReachedException(
+                f"Max iterations ({self.max_iterations}) reached"
+            )
 
         except GsimplexException as e:
+            print(e)
             problem.status = e.status
 
-    def make_feasible(self, vertex: Vertex) -> Tuple[Vertex, int]:
+    def phase_one_solve(self, vertex: Vertex) -> Tuple[Vertex, int]:
 
         iterations = 0
-        while True:
-            dual_infeas = vertex.dual_infeasible_values()
+        while iterations < self.max_iterations:
+            dual_infeas = vertex.dual_infeasible_contraints()
             if len(dual_infeas) == 0:
                 break # No infeasible constraints ==> vertex is feasible
 
-            self._check_iteration_count(iterations)
-
             # Exiting constraint (Bland rule): grab the first infeasible constraint
-            dual_infeas.sort(key=lambda x: x[0].name if x[0].name else "")
-            p, _ = dual_infeas[0]
-            d = -vertex.W @ Vertex.constraint_to_row(p, vertex.problem)
+            leaving, _ = dual_infeas[0]
 
-            # Entering constraint
-            min_pivot = float('inf')
-            q = None
+            # d = A_B^-1 @ Ap
+            d = -vertex.W @ Vertex.constraint_to_row(leaving, vertex.problem)
+
+            # Entering constraint: Bland rule only
+            entering: Optional[LpConstraint] = None
             for constraint in vertex.non_basis:
-                pivot = Vertex.constraint_to_row(constraint, vertex.problem) @ d
-                if pivot <= -DEFAULT_ABS_TOLERANCE and abs(pivot) < min_pivot:
-                    min_pivot = abs(pivot)
-                    q = constraint
+                pivot = d @ Vertex.constraint_to_row(constraint, vertex.problem)
+                if pivot <= -DEFAULT_ABS_TOLERANCE:
+                    entering = constraint
+                    break
 
-            if q is None:
+            if entering is None:
                 raise UnboundedProblemException
 
-            vertex.swap(entering=q, exiting=p)
+            vertex.swap(entering, leaving)
             iterations += 1
 
         return vertex, iterations
-
-    def get_feasible_vertex(self, problem: LpProblem) -> Tuple[Vertex, int]:
-        n = problem.numVariables()
-        
-        constraints = list(problem.constraints.values())
-        initial_point = Vertex(problem, *constraints[:n])
-
-        return self.make_feasible(initial_point)
         
 
     def get_starting_point(self, problem: LpProblem) -> Tuple[Optional[Vertex], int]:
 
+        n = problem.numVariables()
+    
+        constraints = list(problem.constraints.values())
+        initial_point = Vertex(problem, *constraints[:n])
         try:
-            return self.get_feasible_vertex(problem)
+            return self.phase_one_solve(initial_point)
         except GsimplexException:
             return None, 0

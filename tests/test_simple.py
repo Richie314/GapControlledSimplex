@@ -2,7 +2,7 @@ import pytest
 from .test_linear_programming import LinearProgrammingTest
 from gsimplex.solvers.primal_simplex import PrimalSimplex
 from gsimplex.solvers.dual_simplex import DualSimplex
-from gsimplex.solvers.gap_simplex import GapSimplex
+#from gsimplex.solvers.gap_simplex import GapSimplex
 
 
 test_data = [
@@ -43,7 +43,11 @@ test_data = [
     ),
 ]
 
-
+@pytest.mark.parametrize("test_case", test_data)
+def test_primal_simplex(test_case):
+    solver = PrimalSimplex()
+    test_case.test(solver)
+    
 @pytest.mark.parametrize("test_case", test_data)
 def test_dual_simplex(test_case):
     solver = DualSimplex(max_iterations=20)
