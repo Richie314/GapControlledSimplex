@@ -20,12 +20,14 @@ from gsimplex.exception import (
 class PrimalSimplex(ISimplex):
 
     def get_entering_bland(self, 
-                           v: Vertex, d: Optional[Union[np.ndarray, List[float]]] = None,
+                           v: Vertex, 
+                           d: Optional[Union[np.ndarray, List[float]]] = None,
                            ) -> Optional[LpConstraint]:
         return self.get_entering_dantzig(v, d)
 
     def get_entering_dantzig(self, 
-                             v: Vertex, d: Optional[Union[np.ndarray, List[float]]] = None,
+                             v: Vertex,
+                             d: Optional[Union[np.ndarray, List[float]]] = None,
                              ) -> Optional[LpConstraint]:
         assert d is not None
 
@@ -35,7 +37,7 @@ class PrimalSimplex(ISimplex):
             slack = Vertex.slack(c)
 
             den = float(Ai @ d)
-            if den > DEFAULT_ABS_TOLERANCE:
+            if   den > DEFAULT_ABS_TOLERANCE:
                 ratios.append((c, slack / den))
 
         if len(ratios) == 0:
@@ -71,14 +73,14 @@ class PrimalSimplex(ISimplex):
         return max(dual_infeas, key=lambda x: abs(x[1]))[0]
 
     def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
-        a_j = Vertex.constraint_to_row(constraint, v.problem)
-        return -v.W @ a_j
+        h = v.index(constraint)
+        return v.W[:, h]
 
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex]] = None,
+                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
-                 **kwrags):
+                 **kwargs):
 
         try:
             initial_iterations = 0
@@ -86,21 +88,28 @@ class PrimalSimplex(ISimplex):
                 start_basis, initial_iterations = self.get_starting_point(problem)
 
             if start_basis is None:
-                raise UnFeasibleProblemException
-            
+                raise UnFeasibleProblemException(
+                    "Could not find a, primal-feasible, starting basis"
+                )
+
             if not isinstance(start_basis, Vertex):
-                start_basis = Vertex(problem, *start_basis)
+                start_basis = Vertex(
+                    problem, 
+                    *[problem.constraints[name] if isinstance(name, str) else name for name in start_basis]
+                )
         
             if not start_basis.is_primal_feasible():
                 raise UnFeasibleProblemException(
-                    "Starting point isn't primal-feasible"
+                    f"#{initial_iterations} Starting point isn't primal-feasible",
+                    str(start_basis),
                 )
             
             current = start_basis
-            for _ in range(initial_iterations, self.max_iterations):
+            for i in range(initial_iterations, self.max_iterations):
                 if not current.is_primal_feasible():
                     raise InvalidBasisException(
-                        "Current point isn't primal-feasible"
+                        f"#{i} Current point isn't primal-feasible",
+                        str(current),
                     )
                 
                 if current.is_optimal_point():
@@ -118,7 +127,7 @@ class PrimalSimplex(ISimplex):
                 entering = self.get_entering_constraint(current, d=direction, pivot_rule=pivot_rule)
                 if entering is None:
                     raise UnboundedProblemException(
-                        "Problem is unbounded (no entering constraint)"
+                        f"#{i} Problem is unbounded (no entering constraint)"
                     )
 
                 current.swap(entering, leaving)

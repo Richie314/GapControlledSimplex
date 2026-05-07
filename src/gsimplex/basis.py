@@ -181,15 +181,23 @@ class Basis(ConstraintSet):
         if not isinstance(self._y, np.ndarray):
             self._y = np.array(self._y)
         return self._y
+    
+    def __str__(self) -> str:
+        s  = f'x = {self.x}\n'
+        s += f'y = {self.y}\n'
+        for c in self:
+            s += f'{c} -> {c.value():.5}\n'
+        return s
 
-    def swap(self, entering: LpConstraint, exiting: LpConstraint):
+    def swap(self, entering: LpConstraint, leaving: LpConstraint):
 
+        assert entering != leaving, "Cannot swap a constraint with itself!"
         assert entering not in self, "Entering constraint must not be in Basis yet"
 
-        exiting_index = self.index(exiting)
-        assert exiting_index >= 0, "Exiting constraint must be in basis"
+        assert leaving in self, "Leaving constraint must be in basis"
+        leaving_index = self.index(leaving)
 
         # Preserve overall order
-        self[exiting_index] = entering
+        self[leaving_index] = entering
 
         return self

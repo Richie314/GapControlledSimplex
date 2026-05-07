@@ -6,6 +6,7 @@ from pathlib import Path
 
 from gsimplex.vertex import Vertex, DEFAULT_ABS_TOLERANCE
 from gsimplex.solvers.solver_interface import ISolver
+from gsimplex.solvers.simplex_interface import PivotRule, DEFAULT_PIVOT_RULE
 from gsimplex.tools.parser import ProblemParser
 
 class LinearProgrammingTest:
@@ -13,7 +14,7 @@ class LinearProgrammingTest:
                  filename: Union[Path, str],
                  expected_solution: Optional[Union[np.ndarray, List[float]]] = None, 
                  expected_value: Optional[float] = None,
-                 basis: Optional[Union[Vertex, List[LpConstraint]]] = None,
+                 basis: Optional[Union[Vertex, List[LpConstraint], List[str]]] = None,
                  ):
         self.expected_solution = np.array(expected_solution) if expected_solution is not None else None
         self.expected_value = expected_value
@@ -36,13 +37,23 @@ class LinearProgrammingTest:
         for constraint in list(self.problem.constraints.values()):
             assert constraint.name
 
-    def test(self, solver: ISolver):
-        self.problem.solve(solver, start_basis=self.basis)
+    def test(self, solver: ISolver, use_start_basis: bool = True, pivot: PivotRule = DEFAULT_PIVOT_RULE):
+        self.problem.solve(solver, 
+                           start_basis=self.basis if use_start_basis else None, 
+                           pivot_rule=pivot
+                           )
         assert self.problem.status == LpSolutionOptimal
 
         assert self.problem.objective
         value = self.problem.objective.value()
         assert value is not None
+
+        if self.expected_solution is not None:
+            for i in range(self.problem.numVariables()):
+                x_Val = self.problem.variables()[i].varValue
+
+                assert x_Val is not None
+                assert abs(x_Val - self.expected_solution[i]) <= 2*DEFAULT_ABS_TOLERANCE
 
         if self.expected_value is not None:
             assert abs(value - self.expected_value) < DEFAULT_ABS_TOLERANCE

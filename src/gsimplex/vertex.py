@@ -60,25 +60,15 @@ class Vertex(Basis):
 
     def primal_residuals(self) -> np.ndarray:
         s = self.primal_slacks()
-        # print(f"{s=}")
         return np.minimum(s, 0)
     
-    def primal_infeasible_contraints(self, 
-                                     eps: float = DEFAULT_ABS_TOLERANCE
-                                     ) -> List[Tuple[LpConstraint, float]]:
+    def primal_infeasible_contraints(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
         r = self.primal_residuals()
         return [(constraint, r[i]) for i, constraint in enumerate(self.all_constraints)
                 if r[i] < -eps]
 
-    def primal_infeasible_rows(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
-        r = self.primal_residuals()
-        return [(constraint, r[i]) for i, constraint in enumerate(self.problem.constraints.values()) 
-                if r[i] < -eps]
-
     def is_primal_feasible(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
-        r = self.primal_residuals()
-        # print(f"{r=}")
-        return bool(np.all(r >= -eps))
+        return len(self.primal_infeasible_contraints(eps)) == 0
 
     @property
     def dual_value(self) -> float:
@@ -91,14 +81,12 @@ class Vertex(Basis):
     def is_dual_degenerate(self) -> np.bool:
         return np.count_nonzero(self.y) < self.n
     
-    def dual_infeasible_contraints(self, 
-                                   eps: float = DEFAULT_ABS_TOLERANCE
-                                   ) -> List[Tuple[LpConstraint, float]]:
+    def dual_infeasible_contraints(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
         return [(constraint, self.y[i]) for i, constraint in enumerate(self.problem.constraints.values())
                 if constraint in self and self.y[i] < -eps]
     
     def is_dual_feasible(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
-        return bool(np.all(self.y >= -eps))
+        return len(self.dual_infeasible_contraints(eps)) == 0
     
     def is_optimal_point(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
         return self.is_primal_feasible(eps) and self.is_dual_feasible(eps)
@@ -127,6 +115,11 @@ class Vertex(Basis):
     def __sub__(self, other: 'Vertex') -> Tuple[float, Optional[float], float, float]:
         return Vertex.gap(self, other)
     
+    def __str__(self) -> str:
+        s = super().__str__()
+        s += f'\nW = {self.W}'
+        return s
+    
     @staticmethod
     def __build_W(problem: LpProblem,
                    W: np.ndarray,  
@@ -152,28 +145,28 @@ class Vertex(Basis):
         A_Inv = -W - np.outer(col_i, deltaT_W) / denom
         return -A_Inv
     
-    def swap(self, entering: LpConstraint, exiting: LpConstraint|str):
+    def swap(self, entering: LpConstraint, leaving: LpConstraint|str):
 
-        if not isinstance(exiting, LpConstraint):
-            exiting_candidates = [x for x in self if x.name == exiting]
-            if len(exiting_candidates) == 0:
-                raise Exception(f'No candidate is found for exiting constraint with name "{exiting}"')
-            exiting = exiting_candidates[0]
+        if not isinstance(leaving, LpConstraint):
+            leaving_candidates = [x for x in self if x.name == leaving]
+            if len(leaving_candidates) == 0:
+                raise Exception(f'No candidate is found for leaving constraint with name "{leaving}"')
+            leaving = leaving_candidates[0]
 
-        super().swap(entering, exiting)
+        super().swap(entering, leaving)
 
         index = self.index(entering)
-        self.W = self.__build_W(self.problem, self.W, index, entering, exiting)
+        self.W = self.__build_W(self.problem, self.W, index, entering, leaving)
 
-        # A_B x = b_B <==> x = -W b_B
-        b_B = np.array([Vertex.constraint_to_linear_term(constraint) for constraint in self])
-        self._x = -self.W @ b_B
+        # A_B x = b <==> x = -W b
+        b = np.array([Vertex.constraint_to_linear_term(constraint) for constraint in self])
+        self._x = -self.W @ b
         self.update_variables()
 
-        # y_B^T A_B = c^T <==> y = -W^T * c
+        # y_B^T A_B = c^T <==> y_B^T = -c^T * W
         assert self.problem.objective, "Problem must have an objective function"
         c = np.array([self.problem.objective.get(var, 0) for var in self.problem.variables()])
-        y_B = -self.W.transpose() @ c
+        y_B = -c.T @ self.W
         self._y = self._build_Y(y_B, self.problem)
 
         return self

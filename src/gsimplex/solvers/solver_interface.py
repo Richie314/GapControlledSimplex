@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional, List, Union
+from typing import Optional, List
 from pulp import (
-    LpSolver, LpProblem, LpConstraint, 
+    LpSolver, LpProblem,
     LpMinimize, LpMaximize,
 )
-
-from gsimplex.vertex import Vertex
     
 class ISolver(LpSolver, ABC):
     def __init__(self, 
@@ -40,6 +38,8 @@ class ISolver(LpSolver, ABC):
             # Restore the original objective
             lp.setObjective(-lp.objective)
             lp.sense = LpMinimize
+
+        return lp.status
 
 
     @abstractmethod

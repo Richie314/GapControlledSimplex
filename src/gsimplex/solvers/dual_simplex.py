@@ -92,9 +92,9 @@ class DualSimplex(ISimplex):
 
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex]] = None,
+                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
-                 **kwrags):
+                 **kwargs):
 
         try:
             initial_iterations = 0
@@ -102,15 +102,20 @@ class DualSimplex(ISimplex):
                 start_basis, initial_iterations = self.get_starting_point(problem)
 
             if start_basis is None:
-                raise UnFeasibleProblemException
+                raise UnFeasibleProblemException(
+                    "Could not find a starting, dual-feasible, basis"
+                )
             
             if not isinstance(start_basis, Vertex):
-                start_basis = Vertex(problem, *start_basis)
+                start_basis = Vertex(
+                    problem, 
+                    *[problem.constraints[name] if isinstance(name, str) else name for name in start_basis]
+                )
         
             if not start_basis.is_dual_feasible():
                 raise UnFeasibleProblemException(
                     f"#{initial_iterations} Starting point isn't dual-feasible",
-                    start_basis,
+                    str(start_basis),
                 )
 
             current = start_basis
@@ -118,7 +123,7 @@ class DualSimplex(ISimplex):
                 if not current.is_dual_feasible():
                     raise InvalidBasisException(
                         f"#{i} Current point isn't dual-feasible",
-                        current,
+                        str(current),
                     )
                 
                 if current.is_optimal_point():
@@ -140,6 +145,7 @@ class DualSimplex(ISimplex):
                         problem,
                     )
 
+                print(f"Replacing \"{leaving}\" with \"{entering}\"")
                 current.swap(entering, leaving)
 
             raise IterationLimitReachedException(

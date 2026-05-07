@@ -7,7 +7,7 @@ from gsimplex.solvers.solver_interface import ISolver
 from gsimplex.vertex import Vertex
 
 PivotRule = Literal["dantzig", "bland"]
-DEFAULT_PIVOT_RULE = "bland"
+DEFAULT_PIVOT_RULE = "dantzig"
 
 class ISimplex(ISolver, ABC):
     def __init__(self, max_iterations: Optional[int] = None):
@@ -71,7 +71,7 @@ class ISimplex(ISolver, ABC):
     @abstractmethod
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex]] = None,
+                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
-                 **kwrags):
+                 **kwargs):
         pass
