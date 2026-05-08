@@ -53,7 +53,8 @@ class LinearProgrammingTest:
                 x_Val = self.problem.variables()[i].varValue
 
                 assert x_Val is not None
-                assert abs(x_Val - self.expected_solution[i]) <= 2*DEFAULT_ABS_TOLERANCE
+                slack = abs(x_Val - self.expected_solution[i])
+                assert slack <= 2*DEFAULT_ABS_TOLERANCE, f"Too big solution gap: {slack:.4}"
 
         if self.expected_value is not None:
             assert abs(value - self.expected_value) < DEFAULT_ABS_TOLERANCE

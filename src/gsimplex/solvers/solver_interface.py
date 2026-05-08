@@ -27,21 +27,18 @@ class ISolver(LpSolver, ABC):
         assert not lp.isMIP(), "MIP problems are not supported"
         assert lp.objective is not None, "Objective function must be defined"
         
-        is_minimization = lp.sense == LpMinimize
-        if is_minimization:
-            # Invert the objective to maximize
-            lp.setObjective(-lp.objective)
-            lp.sense = LpMaximize
-
-        self.maximize(lp, **kwargs)
-        if is_minimization:
-            # Restore the original objective
-            lp.setObjective(-lp.objective)
-            lp.sense = LpMinimize
+        if lp.sense == LpMinimize:
+            self.minimize(lp, **kwargs)
+        elif lp.sense == LpMaximize:
+            self.maximize(lp, **kwargs)
 
         return lp.status
 
 
     @abstractmethod
     def maximize(self, problem: LpProblem, **kwargs):
+        pass
+
+    @abstractmethod
+    def minimize(self, problem: LpProblem, **kwargs):
         pass

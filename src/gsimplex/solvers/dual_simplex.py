@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, List, Union
 from pulp import LpProblem, LpConstraint
-from pulp.constants import LpStatusOptimal
+from pulp.constants import LpStatusOptimal, LpMinimize, LpMaximize
 import numpy as np
 
 from gsimplex.solvers.simplex_interface import ISimplex, PivotRule, DEFAULT_PIVOT_RULE
@@ -37,14 +37,13 @@ class DualSimplex(ISimplex):
         assert d is not None, "Direction Ak must be provided"
         candidates: List[Tuple[LpConstraint, float]] = []
 
-        for i, global_i in enumerate(v.indices):
-
-            den = d @ v.W[:, i]
-            if den > -DEFAULT_ABS_TOLERANCE:
+        for i, c in enumerate(v):
+            den = d @ v.W[:i]
+            if den > DEFAULT_ABS_TOLERANCE:
                 continue
 
-            ratio = v.y[global_i] / den
-            candidates.append((v[i], ratio))
+            ratio = -v.y[v.global_index(c)] / den
+            candidates.append((c, ratio))
 
         if len(candidates) == 0:
             return None
@@ -59,7 +58,7 @@ class DualSimplex(ISimplex):
         Smallest index among violated constraints.
         """
 
-        violations = v.primal_infeasible_contraints()
+        violations = v.primal_infeasible_constraints()
         if len(violations) == 0:
             return None
 
@@ -73,12 +72,12 @@ class DualSimplex(ISimplex):
         Pick most violated primal constraint (most negative slack).
         """
 
-        violations = v.primal_infeasible_contraints()
+        violations = v.primal_infeasible_constraints()
         if len(violations) == 0:
             return None
 
         # Most negative residual
-        entering, _ = min(violations, key=lambda x: abs(x[1]))
+        entering, _ = max(violations, key=lambda x: abs(x[1]))
         return entering
 
     def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
@@ -87,14 +86,17 @@ class DualSimplex(ISimplex):
         corresponds to column of W associated with leaving constraint.
         """
         
-        return Vertex.constraint_to_row(constraint, v.problem)
+        Ak = Vertex.constraint_to_row(constraint, v.problem)
+        return Ak
 
 
-    def maximize(self, 
+    def minimize(self, 
                  problem: LpProblem, 
                  start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                  **kwargs):
+        
+        assert problem.sense == LpMinimize, "Tried to minimize a maximization problem!"
 
         try:
             initial_iterations = 0
@@ -156,6 +158,28 @@ class DualSimplex(ISimplex):
             print(e)
             problem.status = e.status
 
+    
+    def maximize(self, 
+                 problem: LpProblem, 
+                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
+                 pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
+                 **kwargs
+                 ):
+        
+        assert problem.sense == LpMaximize, "Tried to maximize a minimization problem!"
+        assert problem.objective
+
+        problem.setObjective(-problem.objective)
+        problem.sense = LpMinimize
+
+        self.minimize(problem=problem, 
+                      start_basis=start_basis,
+                      pivot_rule=pivot_rule,
+                      **kwargs)
+        
+        problem.setObjective(-problem.objective)
+        problem.sense = LpMaximize
+
     def phase_one_solve(self, vertex: Vertex) -> Tuple[Vertex, int]:
 
         iterations = 0
@@ -167,7 +191,7 @@ class DualSimplex(ISimplex):
             # Exiting constraint (Bland rule): grab the first infeasible constraint
             leaving, _ = dual_infeas[0]
 
-            # d = A_B^-1 @ Ap
+            # A_B @ d = Ap --> d = A_B^-1 @ Ap = -W @ Ap 
             d = -vertex.W @ Vertex.constraint_to_row(leaving, vertex.problem)
 
             # Entering constraint: Bland rule only

@@ -4,8 +4,7 @@ from pulp import LpProblem, LpConstraint
 from pulp.constants import LpConstraintEQ
 
 from gsimplex.basis import Basis
-
-DEFAULT_ABS_TOLERANCE = 1e-10
+from gsimplex.constants import DEFAULT_ABS_TOLERANCE
 
 class Vertex(Basis):
     """
@@ -15,17 +14,18 @@ class Vertex(Basis):
     def __init__(self, problem: LpProblem, *constraints: LpConstraint):
         super().__init__(problem, *constraints)
 
-        a_B, _ = self._compute_system(problem)
+        a_B, b_B = self._compute_system(problem)
         self.W = -np.linalg.inv(a_B)
-        self.x
+
+        x = -self.W @ b_B
+        self._set_primal_vars(x)
 
     @staticmethod
     def from_problem_state(p: LpProblem, eps: float = DEFAULT_ABS_TOLERANCE) -> "Vertex":
         assert eps >= 0, "Eps must be >= 0"
 
-        return Vertex(p,
-                      *[c for c in list(p.constraints.values())
-                        if abs(Vertex.slack(c)) < 2*eps])
+        active_constraints = [c for c in list(p.constraints.values()) if abs(Vertex.slack(c)) < 2*eps]
+        return Vertex(p, *active_constraints)
     
     def has_named_constraints(self, names: List[str]) -> bool:
         for c in self:
@@ -41,8 +41,16 @@ class Vertex(Basis):
         value = constraint.value()
         assert value is not None, "Constraint value is None, cannot compute slack"
 
+        """
+        Retrieved value can mean different things depending on the type of constraint
+        * value =  Ai * x - bi <= 0 --> bi - Ai * x = -value
+        * value = -Ai * x + bi >= 0 --> bi - Ai * x =  value
+        * value =  Ai * x - bi == 0 --> bi - Ai * x = -value
+        """
+
         if constraint.sense == LpConstraintEQ:
-            return -abs(value)
+            return -value
+
         return constraint.sense * value
     
     @property
@@ -55,25 +63,21 @@ class Vertex(Basis):
         r = self.primal_residuals()
         return len(r[r >= -eps]) > self.n
 
-    def primal_slacks(self) -> np.ndarray:
-        return np.array([Vertex.slack(constraint) for constraint in self.all_constraints])
-
     def primal_residuals(self) -> np.ndarray:
-        s = self.primal_slacks()
+        s = [Vertex.slack(c) for c in self.all_constraints]
         return np.minimum(s, 0)
     
-    def primal_infeasible_contraints(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
+    def primal_infeasible_constraints(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
         r = self.primal_residuals()
-        return [(constraint, r[i]) for i, constraint in enumerate(self.all_constraints)
-                if r[i] < -eps]
+        return [(c, r[i]) for i, c in enumerate(self.all_constraints) if r[i] < -eps]
 
     def is_primal_feasible(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
-        return len(self.primal_infeasible_contraints(eps)) == 0
+        return len(self.primal_infeasible_constraints(eps)) == 0
 
     @property
     def dual_value(self) -> float:
         s = 0
-        for i, constraint in enumerate(self.problem.constraints.values()):
+        for i, constraint in enumerate(self.all_constraints):
             if constraint in self:
                 s += self.y[i] * constraint.constant
         return s
@@ -82,7 +86,7 @@ class Vertex(Basis):
         return np.count_nonzero(self.y) < self.n
     
     def dual_infeasible_contraints(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
-        return [(constraint, self.y[i]) for i, constraint in enumerate(self.problem.constraints.values())
+        return [(constraint, self.y[i]) for i, constraint in enumerate(self.all_constraints)
                 if constraint in self and self.y[i] < -eps]
     
     def is_dual_feasible(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
@@ -153,20 +157,26 @@ class Vertex(Basis):
                 raise Exception(f'No candidate is found for leaving constraint with name "{leaving}"')
             leaving = leaving_candidates[0]
 
-        super().swap(entering, leaving)
+        assert entering != leaving, "Cannot swap a constraint with itself!"
+        assert entering not in self, "Entering constraint must not be in Basis yet"
 
-        index = self.index(entering)
-        self.W = self.__build_W(self.problem, self.W, index, entering, leaving)
+        assert leaving in self, "Leaving constraint must be in basis"
+        leaving_index = self.index(leaving)
+
+        # Preserve overall order
+        self[leaving_index] = entering
+
+        self.W = self.__build_W(self.problem, self.W, leaving_index, entering, leaving)
 
         # A_B x = b <==> x = -W b
         b = np.array([Vertex.constraint_to_linear_term(constraint) for constraint in self])
-        self._x = -self.W @ b
-        self.update_variables()
+        x = -self.W @ b
+        self._set_primal_vars(x)
 
         # y_B^T A_B = c^T <==> y_B^T = -c^T * W
         assert self.problem.objective, "Problem must have an objective function"
         c = np.array([self.problem.objective.get(var, 0) for var in self.problem.variables()])
         y_B = -c.T @ self.W
-        self._y = self._build_Y(y_B, self.problem)
+        self._set_dual_vars(y_B)
 
         return self

@@ -5,6 +5,9 @@ class GsimplexException(Exception):
         self.status = LpStatusNotSolved
         super().__init__(*args)
     
+    def __str__(self) -> str:
+        return '\n'.join(str(a) for a in self.args)
+    
 
 class UnboundedProblemException(GsimplexException):
     def __init__(self, *args: object):

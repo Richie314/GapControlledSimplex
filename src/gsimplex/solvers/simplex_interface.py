@@ -75,3 +75,11 @@ class ISimplex(ISolver, ABC):
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                  **kwargs):
         pass
+
+    @abstractmethod
+    def minimize(self, 
+                 problem: LpProblem, 
+                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
+                 pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
+                 **kwargs):
+        pass

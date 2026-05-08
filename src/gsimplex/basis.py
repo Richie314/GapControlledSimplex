@@ -1,8 +1,7 @@
-from pulp import LpProblem, LpConstraint
+from pulp import LpProblem, LpConstraint, LpVariable
 from pulp.constants import LpConstraintEQ, LpConstraintLE, LpConstraintGE
 from typing import List, Tuple, Optional, Union
 import numpy as np
-
 
 class ConstraintSet(List[LpConstraint]):
     """
@@ -34,21 +33,6 @@ class ConstraintSet(List[LpConstraint]):
 
         a_B, b_B = self._compute_system(problem)
         return np.linalg.solve(a_B, b_B)
-    
-    def _build_Y(self, 
-                  y_B: Union[np.ndarray, List[float]], 
-                  constraints: Union[List[LpConstraint], LpProblem]):
-        if isinstance(constraints, LpProblem):
-            constraints = list(constraints.constraints.values())
-
-        if not isinstance(y_B, np.ndarray):
-            y_B = np.array([yi for yi in y_B])
-
-        y = np.zeros(len(constraints))
-        for i, constraint in enumerate(constraints):
-            if constraint in self:
-                y[i] = y_B.item(self.index(constraint))
-        return y
 
     def _compute_dual_point(self, problem: LpProblem) -> np.ndarray:
         """
@@ -70,10 +54,12 @@ class ConstraintSet(List[LpConstraint]):
         a_B, _ = self._compute_system(problem)
         y_B = np.linalg.solve(a_B.T, c)
 
-        return self._build_Y(y_B, problem)
+        return y_B
     
     @staticmethod
-    def __get_sense_multiplier(constraint: LpConstraint, convert_eq_to: int = LpConstraintLE) -> int:
+    def __get_constraint_sense(constraint: LpConstraint, 
+                               convert_eq_to: int = LpConstraintLE,
+                               ) -> int:
         sense = constraint.sense
         if sense == LpConstraintEQ:
             sense = convert_eq_to
@@ -86,24 +72,38 @@ class ConstraintSet(List[LpConstraint]):
     @staticmethod
     def constraint_to_row(constraint: LpConstraint, 
                           problem: LpProblem, 
-                          convert_eq_to: int = LpConstraintLE
+                          convert_eq_to: int = LpConstraintLE,
                           ) -> np.ndarray:
         """
         Convert a constraint to a numpy array of coefficients corresponding to the given variables.
         """
 
-        sense = ConstraintSet.__get_sense_multiplier(constraint, convert_eq_to)
+        sense = ConstraintSet.__get_constraint_sense(constraint, convert_eq_to)
         return -sense * np.array([constraint.get(var, 0) for var in problem.variables()])
     
     @staticmethod
     def constraint_to_linear_term(constraint: LpConstraint, 
-                                  convert_eq_to: int = LpConstraintLE
+                                  convert_eq_to: int = LpConstraintLE,
                                   ) -> float:
         """
-        Extract the linear term from a constraint.
+        Extract the linear term from a constraint in the form Ax <= b.
         """
 
-        sense = ConstraintSet.__get_sense_multiplier(constraint, convert_eq_to)
+        """
+        Pulp memorizes data in the form Ax + constant <=> 0
+        Hence b is
+            * -constant if <=
+            *  constant if >=
+            * any of the above if == (treated as convert_eq_to says)
+        """
+        sense = ConstraintSet.__get_constraint_sense(constraint, convert_eq_to)
+        
+        """
+        if sense == LpConstraintLE:
+            return -constraint.constant
+        else:
+            return constraint.constant
+        """
         return sense * constraint.constant
     
 
@@ -119,17 +119,64 @@ class Basis(ConstraintSet):
 
         self.n = problem.numVariables()
         assert self.n > 0, "Problem must have at least one variable"
-        assert len(self) == self.n, f"Basis must have same number of constraints as problem dimension: {len(self)} != {self.n}"
+        assert len(self) == self.n, f"Basis must have same number of constraints as problem dimension: {len(self)} ≠ {self.n}"
 
         self.problem = problem
-        self.variables = self.problem.variables().copy()
 
-        self._x: Optional[Union[np.ndarray, List[float]]] = None
-        self._y: Optional[Union[np.ndarray, List[float]]] = None
+        self.__x: Optional[np.ndarray] = None
+        self.__y: Optional[np.ndarray] = None
 
-    def update_variables(self):
-        for i, var in enumerate(self.problem.variables()):
-            var.varValue = self.x[i]
+    def _set_primal_vars(self, x: Union[np.ndarray, List[float]]) -> np.ndarray:
+        
+        if not isinstance(x, np.ndarray):
+            x = np.array(x)
+
+        assert len(x) == self.problem.numVariables()
+
+        self.__x = x
+        for i, var in enumerate(self.variables):
+            var.varValue = self.__x[i]
+
+        return self.__x
+    
+    @property
+    def x(self) -> np.ndarray:
+        """
+        Primal point corresponding to this basis.
+        """
+
+        if self.__x is not None:
+            return self.__x
+        
+        x = self._compute_primal_point(self.problem)
+        return self._set_primal_vars(x)
+    
+
+    def _set_dual_vars(self, y_B: Union[np.ndarray, List[float]]) -> np.ndarray:
+        assert len(y_B) == self.problem.numVariables()
+
+        self.__y =  np.zeros(self.problem.numConstraints())
+        for i, y_i in enumerate(y_B):
+            constraint = self[i]
+            self.__y[self.global_index(constraint)] = y_i
+
+        return self.__y
+    
+    @property
+    def y(self) -> np.ndarray:
+        """
+        Dual point corresponding to this basis.
+        """
+
+        if self.__y is not None:
+            return self.__y
+        
+        y_B = self._compute_dual_point(self.problem)
+        return self._set_dual_vars(y_B)
+
+    @property
+    def variables(self) -> List[LpVariable]:
+        return self.problem.variables()
 
     @property
     def indices(self) -> List[int]:
@@ -152,52 +199,12 @@ class Basis(ConstraintSet):
         Return the set of constraints that are not in the basis.
         """
 
-        return ConstraintSet(*[constraint for constraint in self.problem.constraints.values() 
-                               if constraint not in self])
+        return ConstraintSet(*[c for c in self.all_constraints if c not in self])
     
-    @property
-    def x(self) -> np.ndarray:
-        """
-        Primal point corresponding to this basis.
-        """
-
-        if self._x is None:
-            self._x = self._compute_primal_point(self.problem)
-            self.update_variables()
-
-        if not isinstance(self._x, np.ndarray):
-            self._x = np.array(self._x)
-        return self._x
-    
-    @property
-    def y(self) -> np.ndarray:
-        """
-        Dual point corresponding to this basis.
-        """
-
-        if self._y is None:
-            self._y = self._compute_dual_point(self.problem)
-
-        if not isinstance(self._y, np.ndarray):
-            self._y = np.array(self._y)
-        return self._y
     
     def __str__(self) -> str:
         s  = f'x = {self.x}\n'
         s += f'y = {self.y}\n'
         for c in self:
-            s += f'{c} -> {c.value():.5}\n'
+            s += f'{c} → {c.value():.5}\n'
         return s
-
-    def swap(self, entering: LpConstraint, leaving: LpConstraint):
-
-        assert entering != leaving, "Cannot swap a constraint with itself!"
-        assert entering not in self, "Entering constraint must not be in Basis yet"
-
-        assert leaving in self, "Leaving constraint must be in basis"
-        leaving_index = self.index(leaving)
-
-        # Preserve overall order
-        self[leaving_index] = entering
-
-        return self

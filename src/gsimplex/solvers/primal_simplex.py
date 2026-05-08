@@ -2,7 +2,7 @@ from typing import Optional, Tuple, List, Union
 from pulp import (
     LpProblem, LpConstraint, LpVariable, 
     LpConstraintEQ, LpConstraintLE, LpConstraintGE,
-    LpMinimize,
+    LpMinimize, LpMaximize
 )
 from pulp.constants import LpStatusOptimal
 import numpy as np
@@ -37,7 +37,7 @@ class PrimalSimplex(ISimplex):
             slack = Vertex.slack(c)
 
             den = float(Ai @ d)
-            if   den > DEFAULT_ABS_TOLERANCE:
+            if den > DEFAULT_ABS_TOLERANCE:
                 ratios.append((c, slack / den))
 
         if len(ratios) == 0:
@@ -80,7 +80,10 @@ class PrimalSimplex(ISimplex):
                  problem: LpProblem, 
                  start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
-                 **kwargs):
+                 **kwargs
+                 ):
+        
+        assert problem.sense == LpMaximize, "Tried to maximize a minimization problem!"
 
         try:
             initial_iterations = 0
@@ -140,6 +143,27 @@ class PrimalSimplex(ISimplex):
             print(e)
             problem.status = e.status
     
+    def minimize(self, 
+                 problem: LpProblem, 
+                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
+                 pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
+                 **kwargs
+                 ):
+        
+        assert problem.sense == LpMinimize, "Tried to minimize a maximization problem!"
+        assert problem.objective
+
+        problem.setObjective(-problem.objective)
+        problem.sense = LpMaximize
+
+        self.maximize(problem=problem, 
+                      start_basis=start_basis,
+                      pivot_rule=pivot_rule,
+                      **kwargs)
+        
+        problem.setObjective(-problem.objective)
+        problem.sense = LpMinimize
+
     def get_auxiliary_problem(self, original: LpProblem) -> Tuple[LpProblem, Vertex]:
         n = original.numVariables()
 

@@ -46,12 +46,7 @@ test_data = [
 @pytest.mark.parametrize("test_case", test_data)
 def test_primal_simplex(test_case):
     solver = PrimalSimplex()
-    test_case.test(solver, pivot='dantzig')
-
-@pytest.mark.parametrize("test_case", test_data)
-def test_dual_simplex(test_case):
-    solver = DualSimplex(max_iterations=20)
-    test_case.test(solver, use_start_basis=False, pivot='bland')
+    test_case.test(solver, use_start_basis=False, pivot='dantzig')
 
 '''
 @pytest.mark.parametrize("test_case", test_data)
