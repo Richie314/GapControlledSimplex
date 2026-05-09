@@ -65,7 +65,10 @@ class ISimplex(ISolver, ABC):
         pass
     
     @abstractmethod
-    def get_starting_point(self, problem: LpProblem) -> Tuple[Optional[Vertex], int]:
+    def get_starting_point(self, 
+                           problem: LpProblem, 
+                           pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
+                           ) -> Tuple[Optional[Vertex], int]:
         pass
 
     @abstractmethod

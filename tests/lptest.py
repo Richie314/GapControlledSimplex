@@ -31,8 +31,9 @@ class LinearProgrammingTest:
 
         if self.expected_solution is not None:
             assert self.problem.numVariables() == len(self.expected_solution)
-            #if self.expected_value is None:
-            #    self.expected_value = self.problem.c @ self.expected_solution
+            if self.expected_value is None:
+                c = Vertex.get_objective_function(self.problem)
+                self.expected_value = c @ self.expected_solution
 
         for constraint in list(self.problem.constraints.values()):
             assert constraint.name
@@ -42,7 +43,7 @@ class LinearProgrammingTest:
                            start_basis=self.basis if use_start_basis else None, 
                            pivot_rule=pivot
                            )
-        assert self.problem.status == LpSolutionOptimal
+        assert self.problem.status == LpSolutionOptimal, "Problem was not solved"
 
         assert self.problem.objective
         value = self.problem.objective.value()
@@ -54,7 +55,8 @@ class LinearProgrammingTest:
 
                 assert x_Val is not None
                 slack = abs(x_Val - self.expected_solution[i])
-                assert slack <= 2*DEFAULT_ABS_TOLERANCE, f"Too big solution gap: {slack:.4}"
+                assert slack <= 2*DEFAULT_ABS_TOLERANCE, f"Too big solution gap: {slack:.4} = |{x_Val} - {self.expected_solution[i]}|"
 
         if self.expected_value is not None:
-            assert abs(value - self.expected_value) < DEFAULT_ABS_TOLERANCE
+            slack = abs(value - self.expected_value)
+            assert slack < DEFAULT_ABS_TOLERANCE, f"Too big solution gap: {slack:.4} = |{value} - {self.expected_value}|"

@@ -58,10 +58,6 @@ class Vertex(Basis):
 
         assert self.problem.objective, "Problem must have an objective function"
         return self.problem.objective.valueOrDefault()
-    
-    def is_primal_degenerate(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
-        r = self.primal_residuals()
-        return len(r[r >= -eps]) > self.n
 
     def primal_residuals(self) -> np.ndarray:
         s = [Vertex.slack(c) for c in self.all_constraints]
@@ -82,12 +78,8 @@ class Vertex(Basis):
                 s += self.y[i] * constraint.constant
         return s
     
-    def is_dual_degenerate(self) -> np.bool:
-        return np.count_nonzero(self.y) < self.n
-    
     def dual_infeasible_contraints(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
-        return [(constraint, self.y[i]) for i, constraint in enumerate(self.all_constraints)
-                if constraint in self and self.y[i] < -eps]
+        return [(c, self.y[i]) for i, c in enumerate(self.all_constraints) if self.y[i] < -eps]
     
     def is_dual_feasible(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
         return len(self.dual_infeasible_contraints(eps)) == 0
@@ -121,33 +113,57 @@ class Vertex(Basis):
     
     def __str__(self) -> str:
         s = super().__str__()
-        s += f'\nW = {self.W}'
+        A_B = self._compute_system(self.problem)[0]
+        s += f'Ab = {A_B}\n'
+        s += f'W  = {self.W}\n'
+        s += f'Ab @ W = {A_B @ self.W}'
         return s
     
     @staticmethod
     def __build_W(problem: LpProblem,
                    W: np.ndarray,  
-                   r_index: int,
-                   r_new: LpConstraint,
-                   r_old: LpConstraint
+                   i: int,
+                   new: LpConstraint,
+                   old: LpConstraint
                    ) -> np.ndarray:
-    
+        """
+        Builds a new matrix W s.t. A_B @ W == -I, given the current W and the variation in A_B.
+
+        This function takes O(n^2) time using the Sherman-Morrison formula for the update of an inverse matrix.
+        See https://en.wikipedia.org/wiki/Sherman%E2%80%93Morrison_formula
+        """
+        
+
+        n = W.shape[0]
+        A_Inv = -W
+
         # Compute the variation in the i-th row of A_B
-        delta = Vertex.constraint_to_row(r_new - r_old, problem)
+        new_vec = Vertex.constraint_to_row(new, problem)
+        old_vec = Vertex.constraint_to_row(old, problem)
 
-        # Grab the i-th column of A_B^-1 and compute delta^T @ W
-        col_i = -W[:, r_index]
-        deltaT_W = delta @ -W
+        # Variation in the i-th row
+        v = new_vec - old_vec
 
-        # 1 + delta^T @ W @ e_i
-        denom = 1.0 + deltaT_W[r_index]
+        # u = e_i
+        u = np.zeros(n)
+        u[i] = 1.0
 
-        if np.isclose(denom, 0, atol=DEFAULT_ABS_TOLERANCE):
-            raise ValueError("Updated matrix is singular (denominator ≈ 0).")
+        # Compute denominator
+        Au = A_Inv @ u
+        denom = 1.0 + v @ Au
 
-        # Outer product: col_i @ deltaT_W; Nx1 * 1xN => NxN
-        A_Inv = -W - np.outer(col_i, deltaT_W) / denom
-        return -A_Inv
+        if np.isclose(denom, 0.0, atol=DEFAULT_ABS_TOLERANCE):
+            raise np.linalg.LinAlgError(
+                "Updated matrix is singular or nearly singular (denominator ≈ 0)."
+            )
+
+        # Build rank-1 correction matrix
+        outer = np.outer(Au, v @ A_Inv)
+
+        A_new_inv = A_Inv - outer / denom
+
+        return -A_new_inv
+        
     
     def swap(self, entering: LpConstraint, leaving: LpConstraint|str):
 
@@ -166,16 +182,18 @@ class Vertex(Basis):
         # Preserve overall order
         self[leaving_index] = entering
 
+        # self.__build_W() will update W in a way eqivalent to the following but in O(n^2) instead of O(n^3)
+        # self.W = -np.linalg.inv(self._compute_system(self.problem)[0])
         self.W = self.__build_W(self.problem, self.W, leaving_index, entering, leaving)
 
-        # A_B x = b <==> x = -W b
-        b = np.array([Vertex.constraint_to_linear_term(constraint) for constraint in self])
-        x = -self.W @ b
+        # A_B x = b_B <==> x = -W b_B
+        b_B = np.array([Vertex.constraint_to_linear_term(constraint) for constraint in self])
+        x = -self.W @ b_B
         self._set_primal_vars(x)
 
         # y_B^T A_B = c^T <==> y_B^T = -c^T * W
         assert self.problem.objective, "Problem must have an objective function"
-        c = np.array([self.problem.objective.get(var, 0) for var in self.problem.variables()])
+        c = Vertex.get_objective_function(self.problem)
         y_B = -c.T @ self.W
         self._set_dual_vars(y_B)
 

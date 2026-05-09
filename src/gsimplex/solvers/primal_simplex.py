@@ -233,14 +233,14 @@ class PrimalSimplex(ISimplex):
 
         return aux_problem, aux_vertex
 
-    def get_feasible_vertex(self, problem: LpProblem) -> Tuple[Vertex, int]:
+    def get_feasible_vertex(self, problem: LpProblem, pivot_rule: PivotRule) -> Tuple[Vertex, int]:
         n = problem.numVariables()
 
         aux_problem, aux_vertex = self.get_auxiliary_problem(problem)
         if aux_problem == problem:
             return aux_vertex, 0
 
-        aux_problem.solve(solver=self, start_basis=aux_vertex)
+        aux_problem.solve(solver=self, start_basis=aux_vertex, pivot_rule=pivot_rule)
         if aux_problem.status != LpStatusOptimal:
             raise UnFeasibleProblemException # Auxiliary problem unfeasible or unbounded
         
@@ -267,9 +267,12 @@ class PrimalSimplex(ISimplex):
         return feasible_solution, 0
     
     
-    def get_starting_point(self, problem: LpProblem) -> Tuple[Optional[Vertex], int]:
+    def get_starting_point(self, 
+                           problem: LpProblem,
+                           pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
+                           ) -> Tuple[Optional[Vertex], int]:
 
         try:
-            return self.get_feasible_vertex(problem)
+            return self.get_feasible_vertex(problem, pivot_rule=pivot_rule)
         except GsimplexException:
             return None, 0

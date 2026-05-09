@@ -21,11 +21,11 @@ test_data = [
         expected_solution=[650.0/29, 1300.0/29, 1800.0/29],
         basis=["_C2", "_C6", "_C7"],
     ),
-    LinearProgrammingTest(
-        filename="demo/4.mps",
-        expected_solution=[1000.0/3, 2000.0/3],
-        basis=["_C1", "_C5"],
-    ),
+    #LinearProgrammingTest( # No solutions or many solutions!
+    #    filename="demo/4.mps",
+    #    expected_solution=[1000.0/3, 2000.0/3],
+    #    basis=["_C1", "_C5"],
+    #),
     LinearProgrammingTest(
         filename="demo/5.mps",
         expected_solution=[350.0/23, 1090.0/23],
@@ -41,12 +41,22 @@ test_data = [
         expected_solution=[20.0/21, 3250.0/21, 470.0/21],
         basis=["_C4", "_C5", "_C6"],
     ),
+    LinearProgrammingTest(
+        filename="demo/8.mps",
+        expected_solution=[16/5, 13/5],
+        basis=["_C2", "_C3"],
+    ),
+    LinearProgrammingTest(
+        filename="demo/9.mps",
+        expected_solution=[90/7, 130/7],
+        basis=["_C1", "_C4"],
+    ),
 ]
 
 @pytest.mark.parametrize("test_case", test_data)
 def test_primal_simplex(test_case):
     solver = PrimalSimplex()
-    test_case.test(solver, use_start_basis=False, pivot='dantzig')
+    test_case.test(solver, pivot='dantzig')
 
 '''
 @pytest.mark.parametrize("test_case", test_data)

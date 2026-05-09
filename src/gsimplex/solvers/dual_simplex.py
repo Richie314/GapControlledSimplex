@@ -38,8 +38,8 @@ class DualSimplex(ISimplex):
         candidates: List[Tuple[LpConstraint, float]] = []
 
         for i, c in enumerate(v):
-            den = d @ v.W[:i]
-            if den > DEFAULT_ABS_TOLERANCE:
+            den = d @ v.W[:, i]
+            if den < -DEFAULT_ABS_TOLERANCE:
                 continue
 
             ratio = -v.y[v.global_index(c)] / den
@@ -90,13 +90,13 @@ class DualSimplex(ISimplex):
         return Ak
 
 
-    def minimize(self, 
+    def maximize(self, 
                  problem: LpProblem, 
                  start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                  **kwargs):
         
-        assert problem.sense == LpMinimize, "Tried to minimize a maximization problem!"
+        assert problem.sense == LpMaximize, "Tried to maximize a minimization problem!"
 
         try:
             initial_iterations = 0
@@ -159,65 +159,96 @@ class DualSimplex(ISimplex):
             problem.status = e.status
 
     
-    def maximize(self, 
+    def minimize(self, 
                  problem: LpProblem, 
                  start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                  **kwargs
                  ):
         
-        assert problem.sense == LpMaximize, "Tried to maximize a minimization problem!"
+        assert problem.sense == LpMinimize, "Tried to minimize a maximization problem!"
         assert problem.objective
 
         problem.setObjective(-problem.objective)
-        problem.sense = LpMinimize
+        problem.sense = LpMaximize
 
-        self.minimize(problem=problem, 
+        self.maximize(problem=problem, 
                       start_basis=start_basis,
                       pivot_rule=pivot_rule,
                       **kwargs)
         
         problem.setObjective(-problem.objective)
-        problem.sense = LpMaximize
+        problem.sense = LpMinimize
 
-    def phase_one_solve(self, vertex: Vertex) -> Tuple[Vertex, int]:
+    def phase_one_solve(self, 
+                        v: Vertex, 
+                        pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
+                        ) -> Tuple[Vertex, int]:
 
-        iterations = 0
-        while iterations < self.max_iterations:
-            dual_infeas = vertex.dual_infeasible_contraints()
+        for it in range(self.max_iterations):
+            dual_infeas = v.dual_infeasible_contraints()
             if len(dual_infeas) == 0:
-                break # No infeasible constraints ==> vertex is feasible
+                # No infeasible constraints ==> vertex is dual-feasible
+                return v, it
 
-            # Exiting constraint (Bland rule): grab the first infeasible constraint
-            leaving, _ = dual_infeas[0]
+            if pivot_rule == 'bland':
+                leaving, _ = dual_infeas[0]
+            else:
+                leaving, _ = max(dual_infeas, key=lambda x: abs(x[1]))
+            assert leaving in v, "Leaving index must be in vertex"
 
-            # A_B @ d = Ap --> d = A_B^-1 @ Ap = -W @ Ap 
-            d = -vertex.W @ Vertex.constraint_to_row(leaving, vertex.problem)
+            if pivot_rule == 'bland':
+                d = v.W[:, v.index(leaving)]
+            else:
+                # A_B @ d = Ap --> d = A_B^-1 @ Ap = -W @ Ap 
+                d = -v.W @ Vertex.constraint_to_row(leaving, v.problem)
 
-            # Entering constraint: Bland rule only
             entering: Optional[LpConstraint] = None
-            for constraint in vertex.non_basis:
-                pivot = d @ Vertex.constraint_to_row(constraint, vertex.problem)
-                if pivot <= -DEFAULT_ABS_TOLERANCE:
-                    entering = constraint
-                    break
+            if pivot_rule == 'bland':
+                ratios: List[Tuple[LpConstraint, float]] = []
+                for c in v.non_basis:
+                    Ai = Vertex.constraint_to_row(c, v.problem)
+                    slack = Vertex.slack(c)
+
+                    den = float(Ai @ d)
+                    if den > DEFAULT_ABS_TOLERANCE:
+                        ratios.append((c, slack / den))
+
+                if len(ratios) > 0:
+                    entering, _ = min(ratios, key=lambda x: x[1])
+            else:
+                for constraint in v.non_basis:
+                    pivot = d @ Vertex.constraint_to_row(constraint, v.problem)
+                    if pivot < -DEFAULT_ABS_TOLERANCE:
+                        entering = constraint
+                        break
 
             if entering is None:
-                raise UnboundedProblemException
+                raise UnboundedProblemException(
+                    "Phase I dual-problem is unbounded",
+                    v,
+                    d,
+                    leaving,
+                )
+                
+            v.swap(entering, leaving)
 
-            vertex.swap(entering, leaving)
-            iterations += 1
-
-        return vertex, iterations
+        raise IterationLimitReachedException(
+            f"Max iterations ({self.max_iterations}) reached for Phase I problem"
+        )
         
 
-    def get_starting_point(self, problem: LpProblem) -> Tuple[Optional[Vertex], int]:
+    def get_starting_point(self, 
+                           problem: LpProblem,
+                           pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
+                           ) -> Tuple[Optional[Vertex], int]:
 
         n = problem.numVariables()
     
         constraints = list(problem.constraints.values())
         initial_point = Vertex(problem, *constraints[:n])
         try:
-            return self.phase_one_solve(initial_point)
-        except GsimplexException:
+            return self.phase_one_solve(initial_point, pivot_rule=pivot_rule)
+        except GsimplexException as e:
+            print(e)
             return None, 0

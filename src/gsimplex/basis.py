@@ -43,13 +43,13 @@ class ConstraintSet(List[LpConstraint]):
         """
 
         n = problem.numVariables()
-        assert len(self) >= n, "Not enough constraints to form a square matrix"
+        assert len(self) == n, f"Constraint number mismatch: {len(self)} != {n}"
 
         m = problem.numConstraints()
         assert len(self) <= m, "Too many constraints in basis"
 
-        assert problem.objective, "Problem must have an objective function"
-        c = np.array([problem.objective.get(var, 0) for var in problem.variables()])
+        c = Basis.get_objective_function(problem)
+        assert len(c) == n
 
         a_B, _ = self._compute_system(problem)
         y_B = np.linalg.solve(a_B.T, c)
@@ -105,6 +105,11 @@ class ConstraintSet(List[LpConstraint]):
             return constraint.constant
         """
         return sense * constraint.constant
+    
+    @staticmethod
+    def get_objective_function(problem: LpProblem) -> np.ndarray:
+        assert problem.objective, "Problem must have an objective function"
+        return np.array([problem.objective.get(var, 0) for var in problem.variables()])
     
 
 class Basis(ConstraintSet):
@@ -206,5 +211,5 @@ class Basis(ConstraintSet):
         s  = f'x = {self.x}\n'
         s += f'y = {self.y}\n'
         for c in self:
-            s += f'{c} → {c.value():.5}\n'
+            s += f'{c}\t→ {c.value():.4}\n'
         return s
