@@ -64,9 +64,14 @@ def test_primal_simplex_bland(test_case):
     test_case.test(solver, pivot='bland')
 
 @pytest.mark.parametrize("test_case", test_data)
-def test_primal_simplex_phase_I(test_case):
+def test_primal_simplex_phase_I_bland(test_case):
     solver = PrimalSimplex()
     test_case.test(solver, use_start_basis=False, pivot='bland')
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_primal_simplex_phase_I_dantzig(test_case):
+    solver = PrimalSimplex()
+    test_case.test(solver, use_start_basis=False, pivot='dantzig')
 
 '''
 

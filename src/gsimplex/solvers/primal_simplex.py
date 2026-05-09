@@ -105,6 +105,7 @@ class PrimalSimplex(ISimplex):
                 raise UnFeasibleProblemException(
                     f"#{initial_iterations} Starting point isn't primal-feasible",
                     str(start_basis),
+                    start_basis.primal_infeasible_constraints()
                 )
             
             current = start_basis
@@ -203,7 +204,7 @@ class PrimalSimplex(ISimplex):
             var: LpVariable = aux_vars[j]
             var.setInitialValue(-infeas[j][1])
             var.lowBound = 0
-            var_bound = LpConstraint(var >= 0)
+            var_bound = LpConstraint(var >= 0, sense=LpConstraintGE)
             constraints_to_add.append(var_bound)
             
             if constraint.sense == LpConstraintLE or constraint.sense == LpConstraintEQ:
@@ -256,15 +257,15 @@ class PrimalSimplex(ISimplex):
 
         aux_solution = Vertex.from_problem_state(aux_problem)
         assert len(aux_solution) >= n
-        print("Aux solution constraints: ", len(aux_solution))
+        # print("Aux solution constraints: ", len(aux_solution))
  
         feasible_solution_constraints = [
             c for c in problem.constraints.values()
             if aux_solution.has_named_constraints([
                 f"_B_{c.name}", 
                 f"_U_{c.name}", 
-                # f"_VS_{c.name}", 
-                # f"_VA_{c.name}",
+                f"_VS_{c.name}", 
+                f"_VA_{c.name}",
             ])
         ]
         feas_cons_tot = len(feasible_solution_constraints)
