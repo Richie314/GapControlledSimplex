@@ -92,7 +92,7 @@ class PrimalSimplex(ISimplex):
 
             if start_basis is None:
                 raise UnFeasibleProblemException(
-                    "Could not find a, primal-feasible, starting basis"
+                    "Could not find a *primal-feasible* starting point (basis)"
                 )
 
             if not isinstance(start_basis, Vertex):
@@ -170,28 +170,22 @@ class PrimalSimplex(ISimplex):
         initial_basis = list(original.constraints.values())[:n]
         initial_vertex = Vertex(original, *initial_basis)
 
-        if initial_vertex.is_primal_feasible():
-            return original, initial_vertex
+        infeas = initial_vertex.primal_infeasible_constraints()
+        if len(infeas) == 0:
+            return original, initial_vertex # Already feasible point
 
         # Auxiliary problem
-        rp = initial_vertex.primal_residuals()
-        V = [constraint for constraint in initial_vertex.non_basis
-             if rp[initial_vertex.global_index(constraint)] < 0]
-
-        # Number of auxiliary variables
-        k = len(V)
+        V: List[LpConstraint] = [i[0] for i in infeas]
 
         # Build variables for the auxiliary problem
-        aux_vars = [LpVariable(f"aux_{i}", lowBound=0) for i in range(k)]
-        for i, constraint in enumerate(V):
-            j = initial_vertex.global_index(constraint)
-            aux_vars[i].setInitialValue(-rp[j])
+        k = len(infeas)
+        aux_vars = [LpVariable(f"aux_{n + i + 1}") for i in range(k)]
 
         # Build the auxiliary problem
         aux_problem = LpProblem(f"Auxiliary_for_{original.name}", LpMinimize)
         aux_problem.setObjective(sum(aux_vars))
 
-        for constraint in original.constraints.values():
+        for constraint in initial_vertex.all_constraints:
             j = V.index(constraint) if constraint in V else None
             if j is None:
                 copy = constraint.copy()
@@ -203,26 +197,32 @@ class PrimalSimplex(ISimplex):
                 aux_problem += copy
                 continue
 
-            variable: LpVariable = aux_vars[j]
-            new_constraint_sub = None
-            new_constraint_add = None
+            constraints_to_add : List[LpConstraint] = []
+
+            # s >= 0
+            var: LpVariable = aux_vars[j]
+            var.setInitialValue(-infeas[j][1])
+            var.lowBound = 0
+            var_bound = LpConstraint(var >= 0)
+            constraints_to_add.append(var_bound)
             
             if constraint.sense == LpConstraintLE or constraint.sense == LpConstraintEQ:
                 # Ai @ x - s <= bi || Ai @ x - s == bi
-                new_constraint_sub = constraint.copy()
-                new_constraint_sub.name = f"_VS_{constraint.name}"
-                new_constraint_sub.subInPlace(variable)
+                slack = constraint.copy()
+                slack.name = f"_VS_{constraint.name}"
+                slack.subInPlace(var)
+                constraints_to_add.append(slack)
 
-            if constraint.sense == LpConstraintGE or constraint.sense == LpConstraintEQ:
-                # Ai @ x + s >= bi || Ai @ x + s == bi
-                new_constraint_add = constraint.copy()
-                new_constraint_add.name = f"_VA_{constraint.name}"
-                new_constraint_add.addInPlace(variable)
+            if constraint.sense == LpConstraintGE:
+                # Ai @ x + s >= bi
 
-            if new_constraint_sub:
-                aux_problem += new_constraint_sub
-            if new_constraint_add:                
-                aux_problem += new_constraint_add
+                slack = constraint.copy()
+                slack.name = f"_VA_{constraint.name}"
+                slack.addInPlace(var)
+                constraints_to_add.append(slack)
+
+            for c in constraints_to_add:
+                aux_problem += c
 
         # Build a knwon initial vertex for the auxiliary problem
         aux_vertex = Vertex(
@@ -242,26 +242,33 @@ class PrimalSimplex(ISimplex):
 
         aux_problem.solve(solver=self, start_basis=aux_vertex, pivot_rule=pivot_rule)
         if aux_problem.status != LpStatusOptimal:
-            raise UnFeasibleProblemException # Auxiliary problem unfeasible or unbounded
+            raise UnFeasibleProblemException(
+                "Auxiliary problem unfeasible or unbounded"
+            )
         
         assert aux_problem.objective is not None
         aux_value = aux_problem.objective.value()
-        if aux_value is None or aux_value > DEFAULT_ABS_TOLERANCE:
-            raise UnboundedProblemException # Slack variables should be zero at optimality
+        if aux_value is None or aux_value > DEFAULT_ABS_TOLERANCE * n:
+            raise UnboundedProblemException(
+                f"Auxiliary (phase I) problem was not solved: " + 
+                f"slack variables should be zero at optimality ({aux_value:.4} instead)"
+            )
 
         aux_solution = Vertex.from_problem_state(aux_problem)
         assert len(aux_solution) >= n
+        print("Aux solution constraints: ", len(aux_solution))
  
         feasible_solution_constraints = [
             c for c in problem.constraints.values()
             if aux_solution.has_named_constraints([
                 f"_B_{c.name}", 
                 f"_U_{c.name}", 
-                f"_VS_{c.name}", 
-                f"_VA_{c.name}",
+                # f"_VS_{c.name}", 
+                # f"_VA_{c.name}",
             ])
         ]
-        assert len(feasible_solution_constraints) == n, "Selected constraint count mismatch"
+        feas_cons_tot = len(feasible_solution_constraints)
+        assert feas_cons_tot == n, f"Selected constraint count mismatch: {feas_cons_tot} != {n}"
 
         feasible_solution = Vertex(problem, *feasible_solution_constraints)
         return feasible_solution, 0
@@ -274,5 +281,6 @@ class PrimalSimplex(ISimplex):
 
         try:
             return self.get_feasible_vertex(problem, pivot_rule=pivot_rule)
-        except GsimplexException:
+        except GsimplexException as e:
+            print(e)
             return None, 0

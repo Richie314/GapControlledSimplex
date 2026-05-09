@@ -113,10 +113,9 @@ class Vertex(Basis):
     
     def __str__(self) -> str:
         s = super().__str__()
-        A_B = self._compute_system(self.problem)[0]
-        s += f'Ab = {A_B}\n'
+        s += f'Ab = {self._compute_system(self.problem)[0]}\n'
         s += f'W  = {self.W}\n'
-        s += f'Ab @ W = {A_B @ self.W}'
+        # s += f'Ab @ W = {A_B @ self.W}'
         return s
     
     @staticmethod

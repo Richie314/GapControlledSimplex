@@ -25,7 +25,6 @@ class ISolver(LpSolver, ABC):
         """Solve a well formulated lp problem"""
         
         assert not lp.isMIP(), "MIP problems are not supported"
-        assert lp.objective is not None, "Objective function must be defined"
         
         if lp.sense == LpMinimize:
             self.minimize(lp, **kwargs)
