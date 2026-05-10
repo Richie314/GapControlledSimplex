@@ -63,14 +63,15 @@ class DualSimplex(ISimplex):
         if len(violations) == 0:
             return None
 
-        return violations[0][0]
+        entering, _ = violations[0]
+        return entering
     
     def get_entering_dantzig(self, 
                             v: Vertex, 
                             d: Optional[Union[np.ndarray, List[float]]] = None,
                             ) -> Optional[LpConstraint]:
         """
-        Pick most violated primal constraint (most negative slack).
+        Pick least violated primal constraint (least negative slack != 0).
         """
 
         violations = v.primal_infeasible_constraints()
@@ -78,7 +79,7 @@ class DualSimplex(ISimplex):
             return None
 
         # Most negative residual
-        entering, _ = max(violations, key=lambda x: abs(x[1]))
+        entering, _ = max(violations, key=lambda x: x[1])
         return entering
 
     def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
