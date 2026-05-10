@@ -1,84 +1,97 @@
 from typing import Optional, Tuple, List, Union
-from pulp import LpProblem, LpConstraint
+from pulp import LpProblem, LpConstraint, LpVariable
+from pulp.constants import LpMaximize, LpStatusOptimal
 
-from gsimplex.solvers.iterative_solver import IterativeSolver
-from gsimplex.solvers.simplex_interface import ISimplex
 from gsimplex.solvers.primal_simplex import PrimalSimplex
 from gsimplex.solvers.dual_simplex import DualSimplex
 from gsimplex.vertex import Vertex
-from gsimplex.exception import GsimplexException
+from gsimplex.exception import (
+    UnboundedProblemException,
+    UnFeasibleProblemException,
+    InvalidBasisException,
+    IterationLimitReachedException,
+    GsimplexException,
+)
+from gsimplex.constants import (
+    DEFAULT_ABS_TOLERANCE,
+    DEFAULT_REL_TOLERANCE,
+    PivotRule,
+    DEFAULT_PIVOT_RULE,
+)
 
-class GapSimplex(IterativeSolver, ISimplex):
+class GapDoubleSimplex(PrimalSimplex, DualSimplex):
     def __init__(self):
         super().__init__()
-        self._primal_simplex = PrimalSimplex()
-        self._dual_simplex = DualSimplex()
+
+    def __primal_init(self, 
+                      problem: LpProblem, 
+                      given: Optional[Union[List[LpConstraint], Vertex, List[str]]],
+                      pivot_rule: PivotRule,
+                      ) -> Tuple[Vertex, int]:
+        it = 0
+        if given is None:
+            given, it = PrimalSimplex.get_starting_point(self, problem, pivot_rule)
+
+        if given is None:
+            raise UnFeasibleProblemException(
+                "Could not find a *primal-feasible* starting point (basis)"
+            )
+
+        if not isinstance(given, Vertex):
+            given = Vertex(
+                problem, 
+                *[problem.constraints[name] if isinstance(name, str) else name for name in given]
+            )
+    
+        if not given.is_primal_feasible(self.abs_tol):
+            raise UnFeasibleProblemException(
+                f"#{it} Starting point isn't primal-feasible",
+            )
+
+        return given, it
+    
+    def __dual_init(self, 
+                      problem: LpProblem, 
+                      given: Optional[Union[List[LpConstraint], Vertex, List[str]]],
+                      pivot_rule: PivotRule,
+                      ) -> Tuple[Vertex, int]:
+        it = 0
+        if given is None:
+            given, it = DualSimplex.get_starting_point(self, problem, pivot_rule)
+
+        if given is None:
+            raise UnFeasibleProblemException(
+                "Could not find a *primal-feasible* starting point (basis)"
+            )
+
+        if not isinstance(given, Vertex):
+            given = Vertex(
+                problem, 
+                *[problem.constraints[name] if isinstance(name, str) else name for name in given]
+            )
+    
+        if not given.is_dual_feasible(eps=self.abs_tol):
+            raise UnFeasibleProblemException(
+                f"#{it} Starting point isn't primal-feasible",
+            )
+
+        return given, it
 
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex]] = None
+                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
+                 pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
+                 **kwargs
                  ):
-        primal_vertex, initial_primal = self.get_starting_point(problem, start_basis)
-        dual_vertex, initial_dual = self._dual_simplex.get_starting_point(problem)
+        
+        assert problem.sense == LpMaximize, "Tried to maximize a minimization problem!"
 
-        if (primal_vertex is None or not primal_vertex.is_primal_feasible() or
-            dual_vertex is None or not dual_vertex.is_dual_feasible()):
-            return
+        try:
+            initial_iterations = 0
+            
+            primal_point, primal_it = self.__primal_init(problem, given=start_basis, pivot_rule=pivot_rule)
+            dual_point,   dual_it = self.__dual_init(problem, given=None, pivot_rule=pivot_rule)
 
-        primal_iterations = 0
-        dual_iterations = 0
 
-        while (not primal_vertex.is_optimal_point() and self._check_iteration_count(primal_iterations) and
-               not dual_vertex.is_optimal_point() and self._check_iteration_count(dual_iterations)):
-
-            gap, rel_gap, dual_val, primal_val = Vertex.gap(dual_vertex, primal_vertex)
-
-            print(f"Gap: {gap} = {dual_val} - {primal_val}")
-            if rel_gap is not None:
-                print(f"Relative gap: {rel_gap}")
-
-            if primal_vertex.is_primal_degenerate():
-                new_primal = self._primal_simplex.make_feasible(dual_vertex)
-                if new_primal is not None and new_primal.primal_value > primal_val:
-                    primal_vertex = new_primal
-
-            if dual_vertex.is_dual_degenerate():
-                new_dual = self._dual_simplex.make_feasible(primal_vertex)
-                if new_dual is not None and new_dual.dual_value < dual_val:
-                    dual_vertex = new_dual
-
-            try:
-                primal_vertex = PrimalSimplex.iteration(primal_vertex)
-                if primal_vertex.is_optimal_point():
-                    break
-                primal_iterations += 1
-            except GsimplexException:
-                primal_vertex = None
-                break
-
-            try:
-                dual_vertex = DualSimplex.iteration(dual_vertex)
-                if dual_vertex.is_optimal_point():
-                    break
-                dual_iterations += 1
-            except GsimplexException:
-                dual_vertex = None
-                break
-
-        if primal_vertex is None or dual_vertex is None:
-            return 
-
-        optimal_point = primal_vertex if primal_vertex.is_optimal_point() else dual_vertex
-        optimal_point.x
-
-    def get_feasible_vertex(self, problem: LpProblem) -> Optional[Tuple[Vertex, int]]:
-        return self._primal_simplex.get_feasible_vertex(problem)
-
-    def get_starting_point(self, 
-                           problem: LpProblem, 
-                           given_basis: Optional[Union[List[LpConstraint], Vertex]] = None
-                           ) -> Tuple[Optional[Vertex], int]:
-        return self._primal_simplex.get_starting_point(problem, given_basis)
-
-    def make_feasible(self, vertex: Vertex) -> Optional[Vertex]:
-        raise NotImplementedError()
+        except GsimplexException as e:
+            problem.status = e.status

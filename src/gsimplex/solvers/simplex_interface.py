@@ -8,15 +8,26 @@ from gsimplex.vertex import Vertex
 from gsimplex.constants import (
     PivotRule,
     DEFAULT_PIVOT_RULE,
+    DEFAULT_ABS_TOLERANCE,
+    DEFAULT_REL_TOLERANCE,
+    DEFAULT_MAX_ITERATIONS,
 )
 
 class ISimplex(ISolver, ABC):
-    def __init__(self, max_iterations: Optional[int] = None):
-        if max_iterations is None:
-            max_iterations = 1_000
+    def __init__(self, 
+                 max_iterations: Optional[int] = None,
+                 abs_eps: Optional[float] = None,
+                 rel_eps: Optional[float] = None,
+                 ):
 
-        self.max_iterations: int = max_iterations
-        assert self.max_iterations > 0, "Maximum number of iterations must be positive"
+        self.max_iterations = max_iterations if max_iterations else DEFAULT_MAX_ITERATIONS
+        assert self.max_iterations > 0, f"Maximum number of iterations must be positive. {self.max_iterations} given."
+
+        self.abs_tol = abs_eps if abs_eps else DEFAULT_ABS_TOLERANCE
+        assert self.abs_tol >= 0, f"Absolute ε must be >= 0. {self.abs_tol:.5} given."
+
+        self.rel_tol = rel_eps if rel_eps else DEFAULT_REL_TOLERANCE
+        assert self.rel_tol >= 0, f"Relative ε must be >= 0. {self.abs_tol:.5} given."
 
     @abstractmethod
     def get_entering_dantzig(self, 

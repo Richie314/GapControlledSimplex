@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.scripts]
-gsimplex = "gsimplex.main:__main"
+gsimplex = "gsimplex.__main__:__main"
 gsimplex-download-netlib = "gsimplex.benchmarks.netlib:main"
 gsimplex-emps = "gsimplex.benchmarks.netlib_emps:__main"
 gsimplex-download-plato = "gsimplex.benchmarks.plato:main"

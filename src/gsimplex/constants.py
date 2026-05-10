@@ -11,3 +11,6 @@ PivotRule = Literal["dantzig", "bland"]
 
 DEFAULT_PIVOT_RULE = "dantzig"
 '''Default PivotRule strategy: `dantzig`'''
+
+DEFAULT_MAX_ITERATIONS = 1_000
+'''Default value for the maximum number of iterations'''

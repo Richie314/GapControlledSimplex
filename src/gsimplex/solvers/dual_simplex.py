@@ -12,13 +12,7 @@ from gsimplex.exception import (
     IterationLimitReachedException,
     GsimplexException,
 )
-from gsimplex.constants import (
-    DEFAULT_ABS_TOLERANCE,
-    DEFAULT_REL_TOLERANCE,
-    PivotRule,
-    DEFAULT_PIVOT_RULE,
-)
-
+from gsimplex.constants import PivotRule, DEFAULT_PIVOT_RULE
 
 class DualSimplex(ISimplex):
 
@@ -46,7 +40,7 @@ class DualSimplex(ISimplex):
 
         for i, c in enumerate(v):
             den = d @ v.W[:, i]
-            if den > DEFAULT_ABS_TOLERANCE:
+            if den > self.abs_tol:
                 continue
 
             ratio = -v.y[v.global_index(c)] / den
@@ -66,7 +60,7 @@ class DualSimplex(ISimplex):
         Smallest index among violated constraints.
         """
 
-        violations = v.primal_infeasible_constraints()
+        violations = v.primal_infeasible_constraints(eps=self.abs_tol)
         if len(violations) == 0:
             return None
 
@@ -81,7 +75,7 @@ class DualSimplex(ISimplex):
         Pick least violated primal constraint (least negative slack != 0).
         """
 
-        violations = v.primal_infeasible_constraints()
+        violations = v.primal_infeasible_constraints(eps=self.abs_tol)
         if len(violations) == 0:
             return None
 
@@ -123,21 +117,19 @@ class DualSimplex(ISimplex):
                     *[problem.constraints[name] if isinstance(name, str) else name for name in start_basis]
                 )
         
-            if not start_basis.is_dual_feasible():
+            if not start_basis.is_dual_feasible(eps=self.abs_tol):
                 raise UnFeasibleProblemException(
                     f"#{initial_iterations} Starting point isn't dual-feasible",
-                    str(start_basis),
                 )
 
             current = start_basis
             for i in range(initial_iterations, self.max_iterations):
-                if not current.is_dual_feasible():
+                if not current.is_dual_feasible(eps=self.abs_tol):
                     raise InvalidBasisException(
                         f"#{i} Current point isn't dual-feasible",
-                        str(current),
                     )
                 
-                if current.is_optimal_point():
+                if current.is_primal_feasible(eps=self.abs_tol):
                     problem.status = LpStatusOptimal
                     return
                 
@@ -153,10 +145,8 @@ class DualSimplex(ISimplex):
                 if leaving is None:
                     raise UnFeasibleProblemException(
                         f"#{i} Dual simplex detected infeasibility",
-                        problem,
                     )
 
-                print(f"Replacing \"{leaving}\" with \"{entering}\"")
                 current.swap(entering, leaving)
 
             raise IterationLimitReachedException(
@@ -164,7 +154,7 @@ class DualSimplex(ISimplex):
             )
 
         except GsimplexException as e:
-            print(e)
+            # print(e)
             problem.status = e.status
 
     
@@ -195,7 +185,7 @@ class DualSimplex(ISimplex):
                         ) -> Tuple[Vertex, int]:
 
         for it in range(self.max_iterations):
-            dual_infeas = v.dual_infeasible_contraints()
+            dual_infeas = v.dual_infeasible_contraints(eps=self.abs_tol)
             if len(dual_infeas) == 0:
                 # No infeasible constraints ==> vertex is dual-feasible
                 return v, it
@@ -220,7 +210,7 @@ class DualSimplex(ISimplex):
                     slack = Vertex.slack(c)
 
                     den = float(Ai @ d)
-                    if den > DEFAULT_ABS_TOLERANCE:
+                    if den > self.abs_tol:
                         ratios.append((c, slack / den))
 
                 if len(ratios) > 0:
@@ -228,16 +218,13 @@ class DualSimplex(ISimplex):
             else:
                 for constraint in v.non_basis:
                     pivot = d @ Vertex.constraint_to_row(constraint, v.problem)
-                    if pivot < -DEFAULT_ABS_TOLERANCE:
+                    if pivot < -self.abs_tol:
                         entering = constraint
                         break
 
             if entering is None:
                 raise UnboundedProblemException(
                     "Phase I dual-problem is unbounded",
-                    v,
-                    d,
-                    leaving,
                 )
                 
             v.swap(entering, leaving)
@@ -259,5 +246,5 @@ class DualSimplex(ISimplex):
         try:
             return self.phase_one_solve(initial_point, pivot_rule=pivot_rule)
         except GsimplexException as e:
-            print(e)
+            # print(e)
             return None, 0

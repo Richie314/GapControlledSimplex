@@ -30,7 +30,7 @@ pytest
 ```python
 from pulp import LpVariable, LpProblem, LpMaximize
 from pulp.constants import LpSolutionOptimal
-from gsimplex.solvers.primal_simplex import PrimalSimplex
+from gsimplex.solvers import PrimalSimplex
 
 x1 = LpVariable("x1", lowBound=0, upBound=1)
 x2 = LpVariable("x2", lowBound=0, upBound=3)

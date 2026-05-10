@@ -1,10 +1,9 @@
 from typing import Optional, Tuple, List, Union
-from pulp import (
-    LpProblem, LpConstraint, LpVariable, 
+from pulp import LpProblem, LpConstraint, LpVariable
+from pulp.constants import ( 
     LpConstraintEQ, LpConstraintLE, LpConstraintGE,
-    LpMinimize, LpMaximize
+    LpMinimize, LpMaximize, LpStatusOptimal,
 )
-from pulp.constants import LpStatusOptimal
 import numpy as np
 
 from gsimplex.solvers.simplex_interface import ISimplex
@@ -16,12 +15,7 @@ from gsimplex.exception import (
     IterationLimitReachedException,
     GsimplexException,
 )
-from gsimplex.constants import (
-    DEFAULT_ABS_TOLERANCE,
-    DEFAULT_REL_TOLERANCE,
-    PivotRule,
-    DEFAULT_PIVOT_RULE,
-)
+from gsimplex.constants import PivotRule, DEFAULT_PIVOT_RULE
 
 
 class PrimalSimplex(ISimplex):
@@ -44,7 +38,7 @@ class PrimalSimplex(ISimplex):
             slack = Vertex.slack(c)
 
             den = float(Ai @ d)
-            if den > DEFAULT_ABS_TOLERANCE:
+            if den > self.abs_tol:
                 ratios.append((c, slack / den))
 
         if len(ratios) == 0:
@@ -60,11 +54,12 @@ class PrimalSimplex(ISimplex):
         Bland tie-breaking on minimum ratio.
         """
 
-        dual_infeas = v.dual_infeasible_contraints()
+        dual_infeas = v.dual_infeasible_contraints(eps=self.abs_tol)
         if len(dual_infeas) == 0:
             return None
         
-        return dual_infeas[0][0]
+        leaving, _ = dual_infeas[0]
+        return leaving
     
     def get_leaving_dantzig(self, 
                             v: Vertex, d: Optional[Union[np.ndarray, List[float]]] = None,
@@ -73,11 +68,12 @@ class PrimalSimplex(ISimplex):
         Standard minimum ratio test.
         """
 
-        dual_infeas = v.dual_infeasible_contraints()
+        dual_infeas = v.dual_infeasible_contraints(eps=self.abs_tol)
         if len(dual_infeas) == 0:
             return None
         
-        return max(dual_infeas, key=lambda x: abs(x[1]))[0]
+        leaving, _ = max(dual_infeas, key=lambda x: abs(x[1]))
+        return leaving
 
     def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
         h = v.index(constraint)
@@ -95,11 +91,11 @@ class PrimalSimplex(ISimplex):
         try:
             initial_iterations = 0
             if start_basis is None:
-                start_basis, initial_iterations = self.get_starting_point(problem)
+                start_basis, initial_iterations = self.get_starting_point(problem, pivot_rule)
 
             if start_basis is None:
                 raise UnFeasibleProblemException(
-                    "Could not find a *primal-feasible* starting point (basis)"
+                    "Could not find a *primal-feasible* starting point (basis)",
                 )
 
             if not isinstance(start_basis, Vertex):
@@ -108,22 +104,19 @@ class PrimalSimplex(ISimplex):
                     *[problem.constraints[name] if isinstance(name, str) else name for name in start_basis]
                 )
         
-            if not start_basis.is_primal_feasible():
+            if not start_basis.is_primal_feasible(eps=self.abs_tol):
                 raise UnFeasibleProblemException(
                     f"#{initial_iterations} Starting point isn't primal-feasible",
-                    str(start_basis),
-                    start_basis.primal_infeasible_constraints()
                 )
             
             current = start_basis
             for i in range(initial_iterations, self.max_iterations):
-                if not current.is_primal_feasible():
+                if not current.is_primal_feasible(eps=self.abs_tol):
                     raise InvalidBasisException(
                         f"#{i} Current point isn't primal-feasible",
-                        str(current),
                     )
                 
-                if current.is_optimal_point():
+                if current.is_optimal_point(eps=self.abs_tol):
                     problem.status = LpStatusOptimal
                     return
                 
@@ -148,7 +141,7 @@ class PrimalSimplex(ISimplex):
             )
 
         except GsimplexException as e:
-            print(e)
+            # print(e)
             problem.status = e.status
     
     def minimize(self, 
@@ -178,7 +171,7 @@ class PrimalSimplex(ISimplex):
         initial_basis = list(original.constraints.values())[:n]
         initial_vertex = Vertex(original, *initial_basis)
 
-        infeas = initial_vertex.primal_infeasible_constraints()
+        infeas = initial_vertex.primal_infeasible_constraints(eps=self.abs_tol)
         if len(infeas) == 0:
             return original, initial_vertex # Already feasible point
 
@@ -256,21 +249,19 @@ class PrimalSimplex(ISimplex):
         
         assert aux_problem.objective is not None
         aux_value = aux_problem.objective.value()
-        if aux_value is None or aux_value > DEFAULT_ABS_TOLERANCE * n:
+        if aux_value is None or aux_value > self.abs_tol * n:
             raise UnboundedProblemException(
                 f"Auxiliary (phase I) problem was not solved: " + 
                 f"slack variables should be zero at optimality ({aux_value:.4} instead)"
             )
 
         aux_solution = Vertex.from_problem_state(aux_problem)
-        assert len(aux_solution) >= n
-        # print("Aux solution constraints: ", len(aux_solution))
  
         feasible_solution_constraints = [
             c for c in problem.constraints.values()
             if aux_solution.has_named_constraints([
                 f"_B_{c.name}", 
-                f"_U_{c.name}", 
+              # f"_U_{c.name}", 
                 f"_VS_{c.name}", 
                 f"_VA_{c.name}",
             ])
@@ -290,5 +281,5 @@ class PrimalSimplex(ISimplex):
         try:
             return self.get_feasible_vertex(problem, pivot_rule=pivot_rule)
         except GsimplexException as e:
-            print(e)
+            # print(e)
             return None, 0

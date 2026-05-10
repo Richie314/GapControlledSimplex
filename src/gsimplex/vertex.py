@@ -3,7 +3,7 @@ from typing import List, Tuple, Optional
 from pulp import LpProblem, LpConstraint
 from pulp.constants import LpConstraintEQ
 
-from gsimplex.basis import Basis
+from gsimplex.basis import Basis, ConstraintSet
 from gsimplex.constants import DEFAULT_ABS_TOLERANCE
 
 class Vertex(Basis):
@@ -29,7 +29,7 @@ class Vertex(Basis):
         self._set_primal_vars(x)
 
     @staticmethod
-    def from_problem_state(p: LpProblem, eps: float = DEFAULT_ABS_TOLERANCE) -> "Vertex":
+    def from_problem_state(p: LpProblem, eps: float = DEFAULT_ABS_TOLERANCE) -> "ConstraintSet":
         """
         Build a vertex from the current state of a linear problem.
 
@@ -37,28 +37,19 @@ class Vertex(Basis):
         :type p: LpProblem
         :param eps: Tolerance for determining whether a constraint is active.
         :type eps: float
-        :return: A vertex representing the current basis-active solution.
-        :rtype: Vertex
+        :return: A list of constraints representing the current basis-active solution.
+        :rtype: ConstraintSet
         """
         assert eps >= 0, "Eps must be >= 0"
 
-        active_constraints = [c for c in list(p.constraints.values()) if abs(Vertex.slack(c)) < 2*eps]
-        return Vertex(p, *active_constraints)
-    
-    def has_named_constraints(self, names: List[str]) -> bool:
-        """
-        Check whether this vertex contains any of the requested constraint names.
+        n = p.numVariables()
 
-        :param names: A list of constraint names to search for.
-        :type names: List[str]
-        :return: True if the vertex includes at least one named constraint.
-        :rtype: bool
-        """
-        for c in self:
-            if c.name in names:
-                return True
-            
-        return False
+        active_constraints = [c for c in p.constraints.values() if abs(Vertex.slack(c)) < 2*eps]
+        assert len(active_constraints) >= n, f"Too few active constraints to be on an edge point: {len(active_constraints)} < {n}."
+        
+        # TODO: handle the "len(active_constraints) > n" case
+        
+        return ConstraintSet(*active_constraints)
 
     @staticmethod
     def slack(constraint: LpConstraint) -> float:

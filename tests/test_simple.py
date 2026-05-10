@@ -1,8 +1,11 @@
 import pytest
+
 from .lptest import LinearProgrammingTest
-from gsimplex.solvers.primal_simplex import PrimalSimplex
-from gsimplex.solvers.dual_simplex import DualSimplex
-#from gsimplex.solvers.gap_simplex import GapSimplex
+from gsimplex.solvers import (
+    PrimalSimplex,
+    DualSimplex,
+    GapDoubleSimplex,
+)
 
 
 test_data = [
@@ -72,6 +75,12 @@ test_data = [
     ),
 ]
 
+"""
+=============================================================
+                      Primal Simplex
+=============================================================
+"""
+
 @pytest.mark.parametrize("test_case", test_data)
 def test_primal_simplex_dantzig(test_case):
     solver = PrimalSimplex()
@@ -92,6 +101,12 @@ def test_primal_simplex_phase_I_dantzig(test_case):
     solver = PrimalSimplex()
     test_case.test(solver, use_start_basis=False, pivot='dantzig')
 
+"""
+=============================================================
+                    Dual Simplex
+=============================================================
+"""
+
 @pytest.mark.parametrize("test_case", test_data)
 def test_dual_simplex_bland(test_case):
     solver = DualSimplex(max_iterations=20)
@@ -101,6 +116,12 @@ def test_dual_simplex_bland(test_case):
 def test_dual_simplex_dantzig(test_case):
     solver = DualSimplex(max_iterations=20)
     test_case.test(solver, use_start_basis=False, pivot='dantzig')
+
+"""
+=============================================================
+                  Gap-controlled Simplex
+=============================================================
+"""
 
 '''
 

@@ -1,10 +1,12 @@
 import argparse
 import sys
 
-from gsimplex.solvers.solver_interface import ISolver
-from gsimplex.solvers.primal_simplex import PrimalSimplex
-from gsimplex.solvers.dual_simplex import DualSimplex
-from gsimplex.solvers.gap_simplex import GapSimplex
+from gsimplex.solvers import (
+    ISolver,
+    PrimalSimplex,
+    DualSimplex,
+    GapDoubleSimplex,
+)
 from gsimplex.tools.parser import ProblemParser
 
 def __main():
@@ -15,7 +17,7 @@ def __main():
     :rtype: int
     """
     solvers = {
-        'gsimplex' : GapSimplex,
+        'gsimplex' : GapDoubleSimplex,
         'psimplex': PrimalSimplex,
         'dsimplex': DualSimplex,
     }

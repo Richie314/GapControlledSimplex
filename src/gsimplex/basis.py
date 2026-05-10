@@ -76,7 +76,7 @@ class ConstraintSet(List[LpConstraint]):
         :type constraint: LpConstraint
         :param convert_eq_to: How to treat equality constraints when converting them.
         :type convert_eq_to: int
-        :return: Either LpConstraintGE or LpConstraintLE.
+        :return: Either `pulp.LpConstraintGE` or `pulp.LpConstraintLE`.
         :rtype: int
         """
 
@@ -141,6 +141,21 @@ class ConstraintSet(List[LpConstraint]):
             return constraint.constant
         """
         return sense * constraint.constant
+    
+    def has_named_constraints(self, names: List[str]) -> bool:
+        """
+        Check whether this vertex contains any of the requested constraint names.
+
+        :param names: A list of constraint names to search for.
+        :type names: List[str]
+        :return: True if the vertex includes at least one named constraint.
+        :rtype: bool
+        """
+        for c in self:
+            if c.name is not None and c.name in names:
+                return True
+            
+        return False
     
     @staticmethod
     def get_objective_function(problem: LpProblem) -> np.ndarray:
