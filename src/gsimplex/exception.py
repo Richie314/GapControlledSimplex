@@ -1,4 +1,8 @@
-from pulp.constants import LpStatusNotSolved, LpStatusUnbounded, LpStatusInfeasible
+from pulp.constants import (
+    LpStatusNotSolved, 
+    LpStatusUnbounded, 
+    LpStatusInfeasible,
+)
 
 class GsimplexException(Exception):
     def __init__(self, *args: object):

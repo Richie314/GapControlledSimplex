@@ -8,6 +8,12 @@ from gsimplex.solvers.gap_simplex import GapSimplex
 from gsimplex.tools.parser import ProblemParser
 
 def __main():
+    """
+    Command-line entry point for the gsimplex solver.
+
+    :return: Exit code for the program.
+    :rtype: int
+    """
     solvers = {
         'gsimplex' : GapSimplex,
         'psimplex': PrimalSimplex,

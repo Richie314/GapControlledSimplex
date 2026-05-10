@@ -10,11 +10,31 @@ class ProblemParser:
 
     @staticmethod
     def __load_mps_file(file_path: str|Path, sense: int) -> LpProblem:
+        """
+        Load an MPS file into an LpProblem object.
+
+        :param file_path: Path to the MPS file.
+        :type file_path: str|Path
+        :param sense: Optimization sense (minimize or maximize).
+        :type sense: int
+        :return: The loaded linear programming problem.
+        :rtype: LpProblem
+        """
         _, problem = LpProblem.fromMPS(str(file_path), sense=sense)
         return problem
 
     @staticmethod
     def load_mps_from_file(file_path: str|Path, sense: int = LpMinimize) -> LpProblem:
+        """
+        Load an MPS problem from a file path, handling compressed archives transparently.
+
+        :param file_path: Path to the MPS file or compressed archive.
+        :type file_path: str|Path
+        :param sense: Optimization sense (minimize or maximize).
+        :type sense: int
+        :return: The loaded linear programming problem.
+        :rtype: LpProblem
+        """
 
         # Raise exception if file does not exist
         if not Path(file_path).exists():
@@ -30,6 +50,16 @@ class ProblemParser:
         
     @staticmethod
     def load_mps_from_stream(file_stream: BinaryIO, sense: int = LpMinimize) -> LpProblem:
+        """
+        Load an MPS problem from a binary stream.
+
+        :param file_stream: Stream containing the MPS problem data.
+        :type file_stream: BinaryIO
+        :param sense: Optimization sense (minimize or maximize).
+        :type sense: int
+        :return: The loaded linear programming problem.
+        :rtype: LpProblem
+        """
 
         # Save stream to a temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mps") as tmp_file:

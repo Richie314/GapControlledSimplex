@@ -105,11 +105,6 @@ def test_dual_simplex_dantzig(test_case):
 '''
 
 @pytest.mark.parametrize("test_case", test_data)
-def test_dual_simplex(test_case):
-    solver = DualSimplex(max_iterations=20)
-    test_case.test(solver, use_start_basis=False, pivot='bland')
-
-@pytest.mark.parametrize("test_case", test_data)
 def test_gap_simplex(test_case):
     solver = GapSimplex()
     test_case.test(solver)

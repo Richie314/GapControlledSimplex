@@ -8,11 +8,27 @@ from typing import BinaryIO
 class Extractor:
     @staticmethod
     def is_compressed(filepath: str|Path) -> bool:
+        """
+        Check whether a file path refers to a supported compressed archive.
+
+        :param filepath: Path to the file to inspect.
+        :type filepath: str|Path
+        :return: True if the file extension is .bz2, .gz, or .zip.
+        :rtype: bool
+        """
         path = Path(filepath)
         return path.suffix.lower() in ['.bz2', '.gz', '.zip']
     
     @staticmethod
     def extract_to_stream(filepath: str|Path) -> BinaryIO:
+        """
+        Extract a compressed file into an in-memory binary stream.
+
+        :param filepath: Path to the compressed file.
+        :type filepath: str|Path
+        :return: A binary stream containing the extracted file content.
+        :rtype: BinaryIO
+        """
         path = Path(filepath)
         if not path.exists():
             raise FileNotFoundError(f"File not found: {path}")

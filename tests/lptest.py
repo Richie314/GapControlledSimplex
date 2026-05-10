@@ -4,9 +4,14 @@ from pulp import LpProblem, LpConstraint
 from pulp.constants import LpSolutionOptimal, LpMaximize
 from pathlib import Path
 
-from gsimplex.vertex import Vertex, DEFAULT_ABS_TOLERANCE
+from gsimplex.vertex import Vertex
 from gsimplex.solvers.solver_interface import ISolver
-from gsimplex.solvers.simplex_interface import PivotRule, DEFAULT_PIVOT_RULE
+from gsimplex.constants import (
+    DEFAULT_ABS_TOLERANCE, 
+    DEFAULT_REL_TOLERANCE,
+    PivotRule, 
+    DEFAULT_PIVOT_RULE,
+)
 from gsimplex.tools.parser import ProblemParser
 
 class LinearProgrammingTest:

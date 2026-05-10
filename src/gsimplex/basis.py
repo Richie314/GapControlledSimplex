@@ -14,6 +14,11 @@ class ConstraintSet(List[LpConstraint]):
     def _compute_system(self, problem: LpProblem) -> Tuple[np.ndarray, np.ndarray]:
         """
         Compute the system of equations defined by the constraints in this set.
+
+        :param problem: The linear programming problem that defines the variables.
+        :type problem: LpProblem
+        :return: A tuple containing the constraint coefficient matrix and right-hand side vector.
+        :rtype: Tuple[np.ndarray, np.ndarray]
         """
 
         a_B = np.array([ConstraintSet.constraint_to_row(constraint, problem) for constraint in self])
@@ -22,10 +27,12 @@ class ConstraintSet(List[LpConstraint]):
 
     def _compute_primal_point(self, problem: LpProblem) -> np.ndarray:
         """
-        Compute the vertex corresponding to this basis by solving the system
-        of equations defined by the constraints.
+        Compute the primal point *x* corresponding to this basis by solving the basis system (A_B x = b_B).
 
-        Solves A_B x = b_B
+        :param problem: The linear programming problem used to determine the active variables.
+        :type problem: LpProblem
+        :return: The primal solution vector associated with the current basis.
+        :rtype: np.ndarray
         """
 
         n = problem.numVariables()
@@ -36,10 +43,12 @@ class ConstraintSet(List[LpConstraint]):
 
     def _compute_dual_point(self, problem: LpProblem) -> np.ndarray:
         """
-        Compute the dual vertex corresponding to this basis by solving the system
-        of equations defined by the constraints.
+        Compute the dual point *y* corresponding to this basis by solving the dual system.
 
-        Solves y_B^T A_B = c^T <==> A_B^T y_B = c
+        :param problem: The linear programming problem whose objective determines the dual solution.
+        :type problem: LpProblem
+        :return: The dual solution values for the basic constraints.
+        :rtype: np.ndarray
         """
 
         n = problem.numVariables()
@@ -60,6 +69,17 @@ class ConstraintSet(List[LpConstraint]):
     def __get_constraint_sense(constraint: LpConstraint, 
                                convert_eq_to: int = LpConstraintLE,
                                ) -> int:
+        """
+        Extracts the sense from a `LpConstraint`.
+
+        :param constraint: The constraint to extract the sense from.
+        :type constraint: LpConstraint
+        :param convert_eq_to: How to treat equality constraints when converting them.
+        :type convert_eq_to: int
+        :return: Either LpConstraintGE or LpConstraintLE.
+        :rtype: int
+        """
+
         sense = constraint.sense
         if sense == LpConstraintEQ:
             sense = convert_eq_to
@@ -76,6 +96,15 @@ class ConstraintSet(List[LpConstraint]):
                           ) -> np.ndarray:
         """
         Convert a constraint to a numpy array of coefficients corresponding to the given variables.
+
+        :param constraint: The constraint to convert.
+        :type constraint: LpConstraint
+        :param problem: The linear programming problem containing the variables.
+        :type problem: LpProblem
+        :param convert_eq_to: How to treat equality constraints when converting them.
+        :type convert_eq_to: int
+        :return: A numpy vector of coefficients corresponding to problem variables.
+        :rtype: np.ndarray
         """
 
         sense = ConstraintSet.__get_constraint_sense(constraint, convert_eq_to)
@@ -87,6 +116,13 @@ class ConstraintSet(List[LpConstraint]):
                                   ) -> float:
         """
         Extract the linear term from a constraint in the form Ax <= b.
+
+        :param constraint: The constraint to convert.
+        :type constraint: LpConstraint
+        :param convert_eq_to: How to treat equality constraints when converting them.
+        :type convert_eq_to: int
+        :return: The right-hand side constant term for the converted constraint.
+        :rtype: float
         """
 
         """
@@ -108,6 +144,15 @@ class ConstraintSet(List[LpConstraint]):
     
     @staticmethod
     def get_objective_function(problem: LpProblem) -> np.ndarray:
+        """
+        Extract the objective function coefficients from the problem.
+
+        :param problem: The linear programming problem containing the objective.
+        :type problem: LpProblem
+        :return: The objective coefficients vector aligned with problem variables.
+        :rtype: np.ndarray
+        """
+
         assert problem.objective, "Problem must have an objective function"
         return np.array([problem.objective.get(var, 0) for var in problem.variables()])
     
@@ -118,6 +163,15 @@ class Basis(ConstraintSet):
     """
 
     def __init__(self, problem: LpProblem, *constraints: LpConstraint):
+        """
+        Initialize a basis with the specified constraints for a linear problem.
+
+        :param problem: The linear programming problem for this basis.
+        :type problem: LpProblem
+        :param constraints: The active basis constraints.
+        :type constraints: LpConstraint
+        """
+
         super().__init__(*constraints)
 
         assert problem.objective, "Problem must have an objective function"
@@ -132,7 +186,15 @@ class Basis(ConstraintSet):
         self.__y: Optional[np.ndarray] = None
 
     def _set_primal_vars(self, x: Union[np.ndarray, List[float]]) -> np.ndarray:
-        
+        """
+        Store and assign the primal solution values to problem variables.
+
+        :param x: The primal solution values for all problem variables.
+        :type x: Union[np.ndarray, List[float]]
+        :return: The stored primal solution as a NumPy array.
+        :rtype: np.ndarray
+        """
+
         if not isinstance(x, np.ndarray):
             x = np.array(x)
 
@@ -147,7 +209,10 @@ class Basis(ConstraintSet):
     @property
     def x(self) -> np.ndarray:
         """
-        Primal point corresponding to this basis.
+        Get the primal point corresponding to this basis.
+
+        :return: The primal solution vector for the basis.
+        :rtype: np.ndarray
         """
 
         if self.__x is not None:
@@ -158,6 +223,15 @@ class Basis(ConstraintSet):
     
 
     def _set_dual_vars(self, y_B: Union[np.ndarray, List[float]]) -> np.ndarray:
+        """
+        Store the dual solution values and map them into the full constraint vector.
+
+        :param y_B: The dual values for the basic constraints.
+        :type y_B: Union[np.ndarray, List[float]]
+        :return: The full dual solution vector mapped to all problem constraints.
+        :rtype: np.ndarray
+        """
+
         assert len(y_B) == self.problem.numVariables()
 
         self.__y =  np.zeros(self.problem.numConstraints())
@@ -170,7 +244,10 @@ class Basis(ConstraintSet):
     @property
     def y(self) -> np.ndarray:
         """
-        Dual point corresponding to this basis.
+        Get the dual point corresponding to this basis.
+
+        :return: The dual solution vector for all problem constraints.
+        :rtype: np.ndarray
         """
 
         if self.__y is not None:
@@ -196,6 +273,15 @@ class Basis(ConstraintSet):
         return list(self.problem.constraints.values())
 
     def global_index(self, constraint: LpConstraint) -> int:
+        """
+        Return the global index of a constraint in the original problem ordering.
+
+        :param constraint: The constraint whose index is requested.
+        :type constraint: LpConstraint
+        :return: The zero-based index of the constraint in the problem.
+        :rtype: int
+        """
+
         return self.all_constraints.index(constraint)
 
     @property

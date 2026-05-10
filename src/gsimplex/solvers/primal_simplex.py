@@ -7,8 +7,8 @@ from pulp import (
 from pulp.constants import LpStatusOptimal
 import numpy as np
 
-from gsimplex.solvers.simplex_interface import ISimplex, PivotRule, DEFAULT_PIVOT_RULE
-from gsimplex.vertex import Vertex, DEFAULT_ABS_TOLERANCE
+from gsimplex.solvers.simplex_interface import ISimplex
+from gsimplex.vertex import Vertex
 from gsimplex.exception import (
     UnboundedProblemException,
     UnFeasibleProblemException,
@@ -16,6 +16,13 @@ from gsimplex.exception import (
     IterationLimitReachedException,
     GsimplexException,
 )
+from gsimplex.constants import (
+    DEFAULT_ABS_TOLERANCE,
+    DEFAULT_REL_TOLERANCE,
+    PivotRule,
+    DEFAULT_PIVOT_RULE,
+)
+
 
 class PrimalSimplex(ISimplex):
 

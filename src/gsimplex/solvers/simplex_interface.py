@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Literal, Union, List
+from typing import Optional, Tuple, Union, List
 from pulp import LpProblem, LpConstraint
 import numpy as np
 
 from gsimplex.solvers.solver_interface import ISolver
 from gsimplex.vertex import Vertex
-
-PivotRule = Literal["dantzig", "bland"]
-DEFAULT_PIVOT_RULE = "dantzig"
+from gsimplex.constants import (
+    PivotRule,
+    DEFAULT_PIVOT_RULE,
+)
 
 class ISimplex(ISolver, ABC):
     def __init__(self, max_iterations: Optional[int] = None):

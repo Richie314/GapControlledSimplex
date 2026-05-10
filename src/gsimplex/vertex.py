@@ -12,6 +12,14 @@ class Vertex(Basis):
     """
 
     def __init__(self, problem: LpProblem, *constraints: LpConstraint):
+        """
+        Initialize a vertex from the given basis constraints.
+
+        :param problem: The linear programming problem associated with the vertex.
+        :type problem: LpProblem
+        :param constraints: The basic constraints defining the vertex.
+        :type constraints: LpConstraint
+        """
         super().__init__(problem, *constraints)
 
         a_B, b_B = self._compute_system(problem)
@@ -22,12 +30,30 @@ class Vertex(Basis):
 
     @staticmethod
     def from_problem_state(p: LpProblem, eps: float = DEFAULT_ABS_TOLERANCE) -> "Vertex":
+        """
+        Build a vertex from the current state of a linear problem.
+
+        :param p: The linear programming problem whose active constraints define the vertex.
+        :type p: LpProblem
+        :param eps: Tolerance for determining whether a constraint is active.
+        :type eps: float
+        :return: A vertex representing the current basis-active solution.
+        :rtype: Vertex
+        """
         assert eps >= 0, "Eps must be >= 0"
 
         active_constraints = [c for c in list(p.constraints.values()) if abs(Vertex.slack(c)) < 2*eps]
         return Vertex(p, *active_constraints)
     
     def has_named_constraints(self, names: List[str]) -> bool:
+        """
+        Check whether this vertex contains any of the requested constraint names.
+
+        :param names: A list of constraint names to search for.
+        :type names: List[str]
+        :return: True if the vertex includes at least one named constraint.
+        :rtype: bool
+        """
         for c in self:
             if c.name in names:
                 return True
@@ -36,7 +62,14 @@ class Vertex(Basis):
 
     @staticmethod
     def slack(constraint: LpConstraint) -> float:
-        """Given the constraint Ai, returns bi - Ai*x"""
+        """
+        Compute the slack of a constraint, defined as b_i - A_i x.
+
+        :param constraint: The constraint for which to compute slack.
+        :type constraint: LpConstraint
+        :return: The slack value for the constraint.
+        :rtype: float
+        """
 
         value = constraint.value()
         assert value is not None, "Constraint value is None, cannot compute slack"
@@ -55,23 +88,57 @@ class Vertex(Basis):
     
     @property
     def primal_value(self) -> float:
+        """
+        Get the objective value of the current primal vertex.
+
+        :return: The primal objective value.
+        :rtype: float
+        """
 
         assert self.problem.objective, "Problem must have an objective function"
         return self.problem.objective.valueOrDefault()
 
     def primal_residuals(self) -> np.ndarray:
+        """
+        Compute the primal residuals for all constraints.
+
+        :return: An array of primal residual values truncated at zero.
+        :rtype: np.ndarray
+        """
         s = [Vertex.slack(c) for c in self.all_constraints]
         return np.minimum(s, 0)
     
     def primal_infeasible_constraints(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
+        """
+        Return the list of constraints that violate primal feasibility.
+
+        :param eps: Tolerance used for feasibility checking.
+        :type eps: float
+        :return: A list of (constraint, residual) pairs for infeasible constraints.
+        :rtype: List[Tuple[LpConstraint, float]]
+        """
         r = self.primal_residuals()
         return [(c, r[i]) for i, c in enumerate(self.all_constraints) if r[i] < -eps]
 
     def is_primal_feasible(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
+        """
+        Determine whether the vertex is primal feasible.
+
+        :param eps: Tolerance used for feasibility checking.
+        :type eps: float
+        :return: True if no constraints violate primal feasibility.
+        :rtype: bool
+        """
         return len(self.primal_infeasible_constraints(eps)) == 0
 
     @property
     def dual_value(self) -> float:
+        """
+        Compute the objective value of the current dual vertex.
+
+        :return: The dual objective value.
+        :rtype: float
+        """
         s = 0
         for i, constraint in enumerate(self.all_constraints):
             if constraint in self:
@@ -79,12 +146,36 @@ class Vertex(Basis):
         return s
     
     def dual_infeasible_contraints(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
+        """
+        Return the list of constraints that violate dual feasibility.
+
+        :param eps: Tolerance used for dual feasibility checking.
+        :type eps: float
+        :return: A list of (constraint, reduced cost) pairs for infeasible constraints.
+        :rtype: List[Tuple[LpConstraint, float]]
+        """
         return [(c, self.y[i]) for i, c in enumerate(self.all_constraints) if self.y[i] < -eps]
     
     def is_dual_feasible(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
+        """
+        Determine whether the vertex is dual feasible.
+
+        :param eps: Tolerance used for dual feasibility checking.
+        :type eps: float
+        :return: True if no constraints violate dual feasibility.
+        :rtype: bool
+        """
         return len(self.dual_infeasible_contraints(eps)) == 0
     
     def is_optimal_point(self, eps: float = DEFAULT_ABS_TOLERANCE) -> bool:
+        """
+        Check whether the vertex is both primal and dual feasible.
+
+        :param eps: Tolerance used for feasibility checking.
+        :type eps: float
+        :return: True if the vertex is optimal within tolerance.
+        :rtype: bool
+        """
         return self.is_primal_feasible(eps) and self.is_dual_feasible(eps)
 
 
@@ -93,7 +184,18 @@ class Vertex(Basis):
             primal_vertex: 'Vertex',
             eps: float = DEFAULT_ABS_TOLERANCE
             ) -> Tuple[float, Optional[float], float, float]:
-        
+        """
+        Compute the optimality gap between a dual and a primal vertex.
+
+        :param dual_vertex: The dual vertex for the problem.
+        :type dual_vertex: Vertex
+        :param primal_vertex: The primal vertex for the same problem.
+        :type primal_vertex: Vertex
+        :param eps: Tolerance used for feasibility assertions.
+        :type eps: float
+        :return: A tuple of (gap, relative gap, dual value, primal value).
+        :rtype: Tuple[float, Optional[float], float, float]
+        """
         if dual_vertex.problem is not primal_vertex.problem:
             raise ValueError("Vertices from different problems")
 
@@ -126,10 +228,20 @@ class Vertex(Basis):
                    old: LpConstraint
                    ) -> np.ndarray:
         """
-        Builds a new matrix W s.t. A_B @ W == -I, given the current W and the variation in A_B.
+        Update the inverse basis matrix using a rank-1 Sherman-Morrison correction.
 
-        This function takes O(n^2) time using the Sherman-Morrison formula for the update of an inverse matrix.
-        See https://en.wikipedia.org/wiki/Sherman%E2%80%93Morrison_formula
+        :param problem: The linear problem defining the constraint system.
+        :type problem: LpProblem
+        :param W: The current inverse basis matrix.
+        :type W: np.ndarray
+        :param i: The index of the row being swapped.
+        :type i: int
+        :param new: The entering constraint.
+        :type new: LpConstraint
+        :param old: The leaving constraint.
+        :type old: LpConstraint
+        :return: The updated inverse basis matrix.
+        :rtype: np.ndarray
         """
         
 
@@ -165,6 +277,16 @@ class Vertex(Basis):
         
     
     def swap(self, entering: LpConstraint, leaving: LpConstraint|str):
+        """
+        Replace one basic constraint with another and update the vertex.
+
+        :param entering: The constraint entering the basis.
+        :type entering: LpConstraint
+        :param leaving: The constraint leaving the basis, or its name.
+        :type leaving: LpConstraint | str
+        :return: The updated basis vertex.
+        :rtype: Vertex
+        """
 
         if not isinstance(leaving, LpConstraint):
             leaving_candidates = [x for x in self if x.name == leaving]

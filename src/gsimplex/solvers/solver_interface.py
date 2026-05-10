@@ -18,11 +18,24 @@ class ISolver(LpSolver, ABC):
                          )
         
     def available(self):
-        """True if the solver is available"""
+        """
+        Check whether the solver implementation is available.
+
+        :return: True when the solver can be executed.
+        :rtype: bool
+        """
         return True
     
     def actualSolve(self, lp: LpProblem, **kwargs):
-        """Solve a well formulated lp problem"""
+        """
+        Solve a linear programming problem using the solver implementation.
+
+        :param lp: The linear programming problem to solve.
+        :type lp: LpProblem
+        :param kwargs: Additional solver-specific options.
+        :type kwargs: dict
+        :return: The problem status after solving.
+        """
         
         assert not lp.isMIP(), "MIP problems are not supported"
         
