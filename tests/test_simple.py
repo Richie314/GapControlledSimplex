@@ -51,6 +51,25 @@ test_data = [
         expected_solution=[90/7, 130/7],
         basis=["_C1", "_C4"],
     ),
+    LinearProgrammingTest(
+        filename="demo/10.mps",
+        expected_solution=[87.5, 412.5, 2225.0/6, 1375.0/6],
+        basis=["_C1", "_C2", "_C7", "_C9"],
+    ),
+    LinearProgrammingTest(
+        filename="demo/11.mps",
+        expected_solution=[23.125, 28.125],
+        basis=["_C1", "_C5"],
+    ),
+    LinearProgrammingTest(
+        filename="demo/12.mps",
+        basis=["_C2", "_C5"],
+    ),
+    LinearProgrammingTest(
+        filename="demo/13.mps",
+        expected_solution=[5300/43, 400/43],
+        basis=["_C1", "_C5"],
+    ),
 ]
 
 @pytest.mark.parametrize("test_case", test_data)
@@ -71,6 +90,16 @@ def test_primal_simplex_phase_I_bland(test_case):
 @pytest.mark.parametrize("test_case", test_data)
 def test_primal_simplex_phase_I_dantzig(test_case):
     solver = PrimalSimplex()
+    test_case.test(solver, use_start_basis=False, pivot='dantzig')
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_dual_simplex_bland(test_case):
+    solver = DualSimplex(max_iterations=20)
+    test_case.test(solver, use_start_basis=False, pivot='bland')
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_dual_simplex_dantzig(test_case):
+    solver = DualSimplex(max_iterations=20)
     test_case.test(solver, use_start_basis=False, pivot='dantzig')
 
 '''

@@ -39,7 +39,7 @@ class DualSimplex(ISimplex):
 
         for i, c in enumerate(v):
             den = d @ v.W[:, i]
-            if den < -DEFAULT_ABS_TOLERANCE:
+            if den > DEFAULT_ABS_TOLERANCE:
                 continue
 
             ratio = -v.y[v.global_index(c)] / den
@@ -48,7 +48,8 @@ class DualSimplex(ISimplex):
         if len(candidates) == 0:
             return None
 
-        return min(candidates, key=lambda x: x[1])[0]
+        leaving, _ = min(candidates, key=lambda x: x[1])
+        return leaving
 
     def get_entering_bland(self, 
                           v: Vertex, 
