@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import sys
 
@@ -9,7 +11,7 @@ from gsimplex.solvers import (
 )
 from gsimplex.tools.parser import ProblemParser
 
-def __main():
+def main():
     """
     Command-line entry point for the gsimplex solver.
 
@@ -41,4 +43,4 @@ def __main():
     return 0
 
 if __name__ == "__main__":
-    sys.exit(__main())
+    sys.exit(main())

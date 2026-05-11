@@ -15,13 +15,23 @@ from gsimplex.exception import (
 from gsimplex.constants import PivotRule, DEFAULT_PIVOT_RULE
 
 class DualSimplex(ISimplex):
+    """
+    Dual simplex solver implementation.
+    """
 
     def get_leaving_bland(self, 
                            v: Vertex,
                            d: Optional[Union[np.ndarray, List[float]]] = None,
                            ) -> Optional[LpConstraint]:
         """
-        Bland version of dual ratio test.
+        Select the leaving constraint using Bland's dual ratio rule.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param d: Current moving direction vector (not used by Bland rule).
+        :type d: Optional[Union[np.ndarray, List[float]]]
+        :return: The chosen leaving constraint or None when no valid candidate exists.
+        :rtype: Optional[LpConstraint]
         """
 
         return self.get_leaving_dantzig(v, d)
@@ -31,8 +41,14 @@ class DualSimplex(ISimplex):
                              d: Optional[Union[np.ndarray, List[float]]] = None,
                              ) -> Optional[LpConstraint]:
         """
-        Choose entering constraint minimizing ratio:
-            y_j / a_rj   with a_rj < 0
+        Select the leaving constraint by minimizing the dual ratio.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param d: Current moving direction vector used to compute ratios.
+        :type d: Optional[Union[np.ndarray, List[float]]]
+        :return: The chosen leaving constraint or None when no valid candidate exists.
+        :rtype: Optional[LpConstraint]
         """
 
         assert d is not None, "Direction Ak must be provided"
@@ -57,7 +73,14 @@ class DualSimplex(ISimplex):
                           d: Optional[Union[np.ndarray, List[float]]] = None,
                           ) -> Optional[LpConstraint]:
         """
-        Smallest index among violated constraints.
+        Select the entering constraint using Bland's primal violation order.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param d: Current moving direction vector (not used in this rule).
+        :type d: Optional[Union[np.ndarray, List[float]]]
+        :return: The chosen entering constraint or None when none are violated.
+        :rtype: Optional[LpConstraint]
         """
 
         violations = v.primal_infeasible_constraints(eps=self.abs_tol)
@@ -72,7 +95,14 @@ class DualSimplex(ISimplex):
                             d: Optional[Union[np.ndarray, List[float]]] = None,
                             ) -> Optional[LpConstraint]:
         """
-        Pick least violated primal constraint (least negative slack != 0).
+        Select the entering constraint by choosing the most violated primal constraint.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param d: Current moving direction vector (not used by this selection rule).
+        :type d: Optional[Union[np.ndarray, List[float]]]
+        :return: The chosen entering constraint or None when no violations exist.
+        :rtype: Optional[LpConstraint]
         """
 
         violations = v.primal_infeasible_constraints(eps=self.abs_tol)
@@ -85,8 +115,14 @@ class DualSimplex(ISimplex):
 
     def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
         """
-        Dual simplex direction:
-        corresponds to column of W associated with leaving constraint.
+        Compute the dual simplex moving direction for a constraint.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param constraint: The constraint used to compute the direction.
+        :type constraint: LpConstraint
+        :return: The moving direction vector for the dual simplex step.
+        :rtype: np.ndarray
         """
         
         Ak = Vertex.constraint_to_row(constraint, v.problem)
@@ -98,6 +134,18 @@ class DualSimplex(ISimplex):
                  start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                  **kwargs):
+        """
+        Solve a maximization problem using the dual simplex method.
+
+        :param problem: The LP problem to solve.
+        :type problem: LpProblem
+        :param start_basis: Optional starting basis or vertex.
+        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :param pivot_rule: Pivot rule used to choose entering and leaving constraints.
+        :type pivot_rule: PivotRule
+        :param kwargs: Additional solver options.
+        :type kwargs: dict
+        """
         
         assert problem.sense == LpMaximize, "Tried to maximize a minimization problem!"
 
@@ -164,6 +212,18 @@ class DualSimplex(ISimplex):
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                  **kwargs
                  ):
+        """
+        Solve a minimization problem by converting it to a maximization problem for dual simplex.
+
+        :param problem: The LP problem to solve.
+        :type problem: LpProblem
+        :param start_basis: Optional starting basis or vertex.
+        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :param pivot_rule: Pivot rule used during the solve.
+        :type pivot_rule: PivotRule
+        :param kwargs: Additional solver options.
+        :type kwargs: dict
+        """
         
         assert problem.sense == LpMinimize, "Tried to minimize a maximization problem!"
         assert problem.objective
@@ -183,6 +243,16 @@ class DualSimplex(ISimplex):
                         v: Vertex, 
                         pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                         ) -> Tuple[Vertex, int]:
+        """
+        Perform Phase I iterations to obtain a dual-feasible starting vertex.
+
+        :param v: Initial vertex for the Phase I solve.
+        :type v: Vertex
+        :param pivot_rule: Pivot rule used during Phase I.
+        :type pivot_rule: PivotRule
+        :return: A tuple with a dual-feasible vertex and the number of iterations used.
+        :rtype: Tuple[Vertex, int]
+        """
 
         for it in range(self.max_iterations):
             dual_infeas = v.dual_infeasible_contraints(eps=self.abs_tol)
@@ -238,6 +308,16 @@ class DualSimplex(ISimplex):
                            problem: LpProblem,
                            pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                            ) -> Tuple[Optional[Vertex], int]:
+        """
+        Find a starting point for the dual simplex solver.
+
+        :param problem: The LP problem to initialize.
+        :type problem: LpProblem
+        :param pivot_rule: Pivot rule used for the starting point search.
+        :type pivot_rule: PivotRule
+        :return: A dual-feasible starting vertex and the iteration count, or (None, 0).
+        :rtype: Tuple[Optional[Vertex], int]
+        """
 
         n = problem.numVariables()
     

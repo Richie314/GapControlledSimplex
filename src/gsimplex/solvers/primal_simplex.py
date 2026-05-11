@@ -19,17 +19,40 @@ from gsimplex.constants import PivotRule, DEFAULT_PIVOT_RULE
 
 
 class PrimalSimplex(ISimplex):
+    """
+    Primal simplex solver implementation.
+    """
 
     def get_entering_bland(self, 
                            v: Vertex, 
                            d: Optional[Union[np.ndarray, List[float]]] = None,
                            ) -> Optional[LpConstraint]:
+        """
+        Select the entering constraint using Bland's rule.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param d: Current moving direction vector.
+        :type d: Optional[Union[np.ndarray, List[float]]]
+        :return: The chosen entering constraint or None when none exists.
+        :rtype: Optional[LpConstraint]
+        """
         return self.get_entering_dantzig(v, d)
 
     def get_entering_dantzig(self, 
                              v: Vertex,
                              d: Optional[Union[np.ndarray, List[float]]] = None,
                              ) -> Optional[LpConstraint]:
+        """
+        Select the entering constraint by Dantzig's rule.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param d: Current moving direction vector.
+        :type d: Optional[Union[np.ndarray, List[float]]]
+        :return: The chosen entering constraint or None when no valid entering constraint exists.
+        :rtype: Optional[LpConstraint]
+        """
         assert d is not None
 
         ratios: List[Tuple[LpConstraint, float]] = []
@@ -51,7 +74,14 @@ class PrimalSimplex(ISimplex):
                           d: Optional[Union[np.ndarray, List[float]]] = None,
                           ) -> Optional[LpConstraint]:
         """
-        Bland tie-breaking on minimum ratio.
+        Select the leaving constraint using Bland's minimum-ratio tie-breaking rule.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param d: Current moving direction vector (not used by Bland rule).
+        :type d: Optional[Union[np.ndarray, List[float]]]
+        :return: The chosen leaving constraint or None when no dual infeasibility exists.
+        :rtype: Optional[LpConstraint]
         """
 
         dual_infeas = v.dual_infeasible_contraints(eps=self.abs_tol)
@@ -65,7 +95,14 @@ class PrimalSimplex(ISimplex):
                             v: Vertex, d: Optional[Union[np.ndarray, List[float]]] = None,
                             ) -> Optional[LpConstraint]:
         """
-        Standard minimum ratio test.
+        Select the leaving constraint using the Dantzig minimum-ratio rule.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param d: Current moving direction vector (not used directly here).
+        :type d: Optional[Union[np.ndarray, List[float]]]
+        :return: The chosen leaving constraint or None when no dual infeasibility exists.
+        :rtype: Optional[LpConstraint]
         """
 
         dual_infeas = v.dual_infeasible_contraints(eps=self.abs_tol)
@@ -76,6 +113,16 @@ class PrimalSimplex(ISimplex):
         return leaving
 
     def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
+        """
+        Compute the moving direction for a candidate leaving constraint.
+
+        :param v: Current vertex representing the basis.
+        :type v: Vertex
+        :param constraint: The leaving constraint used to compute direction.
+        :type constraint: LpConstraint
+        :return: The moving direction vector corresponding to the leaving constraint.
+        :rtype: np.ndarray
+        """
         h = v.index(constraint)
         return v.W[:, h]
 
@@ -85,6 +132,18 @@ class PrimalSimplex(ISimplex):
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                  **kwargs
                  ):
+        """
+        Solve a maximization problem using the primal simplex method.
+
+        :param problem: The LP problem to solve.
+        :type problem: LpProblem
+        :param start_basis: Optional starting basis or vertex.
+        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :param pivot_rule: Pivot rule used to choose entering and leaving constraints.
+        :type pivot_rule: PivotRule
+        :param kwargs: Additional solver options.
+        :type kwargs: dict
+        """
         
         assert problem.sense == LpMaximize, "Tried to maximize a minimization problem!"
 
@@ -150,6 +209,18 @@ class PrimalSimplex(ISimplex):
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                  **kwargs
                  ):
+        """
+        Solve a minimization problem by converting it to a maximization problem.
+
+        :param problem: The LP problem to solve.
+        :type problem: LpProblem
+        :param start_basis: Optional starting basis or vertex.
+        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :param pivot_rule: Pivot rule used during the simplex iterations.
+        :type pivot_rule: PivotRule
+        :param kwargs: Additional solver options.
+        :type kwargs: dict
+        """
         
         assert problem.sense == LpMinimize, "Tried to minimize a maximization problem!"
         assert problem.objective
@@ -166,6 +237,14 @@ class PrimalSimplex(ISimplex):
         problem.sense = LpMinimize
 
     def get_auxiliary_problem(self, original: LpProblem) -> Tuple[LpProblem, Vertex]:
+        """
+        Construct an auxiliary LP problem and initial vertex for Phase I.
+
+        :param original: The original LP problem requiring a feasible basis.
+        :type original: LpProblem
+        :return: A tuple with the auxiliary problem and its initial feasible vertex.
+        :rtype: Tuple[LpProblem, Vertex]
+        """
         n = original.numVariables()
 
         initial_basis = list(original.constraints.values())[:n]
@@ -235,6 +314,16 @@ class PrimalSimplex(ISimplex):
         return aux_problem, aux_vertex
 
     def get_feasible_vertex(self, problem: LpProblem, pivot_rule: PivotRule) -> Tuple[Vertex, int]:
+        """
+        Compute a primal feasible basis vertex for the given problem.
+
+        :param problem: The LP problem to make feasible.
+        :type problem: LpProblem
+        :param pivot_rule: Pivot rule used for Phase I solves.
+        :type pivot_rule: PivotRule
+        :return: A tuple containing a feasible vertex and the iteration count.
+        :rtype: Tuple[Vertex, int]
+        """
         n = problem.numVariables()
 
         aux_problem, aux_vertex = self.get_auxiliary_problem(problem)
@@ -277,6 +366,16 @@ class PrimalSimplex(ISimplex):
                            problem: LpProblem,
                            pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                            ) -> Tuple[Optional[Vertex], int]:
+        """
+        Find a starting basis for the primal simplex solver.
+
+        :param problem: The LP problem to initialize.
+        :type problem: LpProblem
+        :param pivot_rule: Pivot rule used to obtain the starting point.
+        :type pivot_rule: PivotRule
+        :return: A possibly feasible starting vertex and the iteration count.
+        :rtype: Tuple[Optional[Vertex], int]
+        """
 
         try:
             return self.get_feasible_vertex(problem, pivot_rule=pivot_rule)
