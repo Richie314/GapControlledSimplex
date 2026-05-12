@@ -8,14 +8,7 @@ import numpy as np
 
 from gsimplex.solvers.simplex_interface import ISimplex
 from gsimplex.vertex import Vertex
-from gsimplex.exception import (
-    UnboundedProblemException,
-    UnFeasibleProblemException,
-    InvalidBasisException,
-    IterationLimitReachedException,
-    GsimplexException,
-)
-from gsimplex.constants import PivotRule, DEFAULT_PIVOT_RULE
+from gsimplex.exception import *
 
 
 class PrimalSimplex(ISimplex):
@@ -23,36 +16,21 @@ class PrimalSimplex(ISimplex):
     Primal simplex solver implementation.
     """
 
-    def get_entering_bland(self, 
-                           v: Vertex, 
-                           d: Optional[Union[np.ndarray, List[float]]] = None,
-                           ) -> Optional[LpConstraint]:
-        """
-        Select the entering constraint using Bland's rule.
-
-        :param v: Current vertex representing the basis.
-        :type v: Vertex
-        :param d: Current moving direction vector.
-        :type d: Optional[Union[np.ndarray, List[float]]]
-        :return: The chosen entering constraint or None when none exists.
-        :rtype: Optional[LpConstraint]
-        """
-        return self.get_entering_dantzig(v, d)
-
-    def get_entering_dantzig(self, 
-                             v: Vertex,
-                             d: Optional[Union[np.ndarray, List[float]]] = None,
-                             ) -> Optional[LpConstraint]:
+    def get_entering_constraint(self, 
+                                v: Vertex, 
+                                d: Optional[Union[np.ndarray, List[float]]] = None,
+                                ) -> Optional[LpConstraint]:
         """
         Select the entering constraint by Dantzig's rule.
 
         :param v: Current vertex representing the basis.
         :type v: Vertex
-        :param d: Current moving direction vector.
+        :param d: Current moving direction vector, required.
         :type d: Optional[Union[np.ndarray, List[float]]]
         :return: The chosen entering constraint or None when no valid entering constraint exists.
         :rtype: Optional[LpConstraint]
         """
+
         assert d is not None
 
         ratios: List[Tuple[LpConstraint, float]] = []
@@ -67,35 +45,17 @@ class PrimalSimplex(ISimplex):
         if len(ratios) == 0:
             return None
         
-        return min(ratios, key=lambda x: x[1])[0]
+        entering, _ = min(ratios, key=lambda x: x[1])
+        return entering
 
-    def get_leaving_bland(self, 
-                          v: Vertex, 
-                          d: Optional[Union[np.ndarray, List[float]]] = None,
-                          ) -> Optional[LpConstraint]:
-        """
-        Select the leaving constraint using Bland's minimum-ratio tie-breaking rule.
 
-        :param v: Current vertex representing the basis.
-        :type v: Vertex
-        :param d: Current moving direction vector (not used by Bland rule).
-        :type d: Optional[Union[np.ndarray, List[float]]]
-        :return: The chosen leaving constraint or None when no dual infeasibility exists.
-        :rtype: Optional[LpConstraint]
+    def get_leaving_constraint(self, 
+                               v: Vertex, 
+                               d: Optional[Union[np.ndarray, List[float]]] = None,
+                               ) -> Optional[LpConstraint]:
         """
-
-        dual_infeas = v.dual_infeasible_contraints(eps=self.abs_tol)
-        if len(dual_infeas) == 0:
-            return None
-        
-        leaving, _ = dual_infeas[0]
-        return leaving
-    
-    def get_leaving_dantzig(self, 
-                            v: Vertex, d: Optional[Union[np.ndarray, List[float]]] = None,
-                            ) -> Optional[LpConstraint]:
-        """
-        Select the leaving constraint using the Dantzig minimum-ratio rule.
+        Select the leaving constraint using the Dantzig's maximum dual-infeasibility rule
+        or Bland's lesser constraint's name rule.
 
         :param v: Current vertex representing the basis.
         :type v: Vertex
@@ -109,7 +69,11 @@ class PrimalSimplex(ISimplex):
         if len(dual_infeas) == 0:
             return None
         
-        leaving, _ = max(dual_infeas, key=lambda x: abs(x[1]))
+        if self.pivot_rule == "bland": 
+            leaving, _ = dual_infeas[0]
+        else:
+            leaving, _ = max(dual_infeas, key=lambda x: abs(x[1]))
+
         return leaving
 
     def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
@@ -123,13 +87,31 @@ class PrimalSimplex(ISimplex):
         :return: The moving direction vector corresponding to the leaving constraint.
         :rtype: np.ndarray
         """
+
         h = v.index(constraint)
         return v.W[:, h]
+    
+    def _single_iteration(self, point: "Vertex") -> "Vertex":
+
+        # Choose leaving constraint
+        leaving = PrimalSimplex.get_leaving_constraint(self, point)
+        assert leaving is not None
+    
+        # Calculate the direction
+        direction = PrimalSimplex.get_moving_direction(self, point, leaving)
+
+        # Choose entering constraint
+        entering = PrimalSimplex.get_entering_constraint(self, point, d=direction)
+        if entering is None:
+            raise UnboundedProblemException(
+                f"Problem is unbounded (no entering constraint)"
+            )
+
+        return point.swap(entering, leaving)
 
     def maximize(self, 
                  problem: LpProblem, 
                  start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
-                 pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                  **kwargs
                  ):
         """
@@ -139,8 +121,6 @@ class PrimalSimplex(ISimplex):
         :type problem: LpProblem
         :param start_basis: Optional starting basis or vertex.
         :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
-        :param pivot_rule: Pivot rule used to choose entering and leaving constraints.
-        :type pivot_rule: PivotRule
         :param kwargs: Additional solver options.
         :type kwargs: dict
         """
@@ -150,7 +130,7 @@ class PrimalSimplex(ISimplex):
         try:
             initial_iterations = 0
             if start_basis is None:
-                start_basis, initial_iterations = self.get_starting_point(problem, pivot_rule)
+                start_basis, initial_iterations = self.get_starting_point(problem)
 
             if start_basis is None:
                 raise UnFeasibleProblemException(
@@ -179,21 +159,7 @@ class PrimalSimplex(ISimplex):
                     problem.status = LpStatusOptimal
                     return
                 
-                # Choose leaving constraint
-                leaving = self.get_leaving_constraint(current, pivot_rule=pivot_rule)
-                assert leaving is not None
-            
-                # Calculate the direction
-                direction = self.get_moving_direction(current, leaving)
-
-                # Choose entering constraint
-                entering = self.get_entering_constraint(current, d=direction, pivot_rule=pivot_rule)
-                if entering is None:
-                    raise UnboundedProblemException(
-                        f"#{i} Problem is unbounded (no entering constraint)"
-                    )
-
-                current.swap(entering, leaving)
+                self._single_iteration(current)
 
             raise IterationLimitReachedException(
                 f"Max iterations ({self.max_iterations}) reached"
@@ -202,39 +168,6 @@ class PrimalSimplex(ISimplex):
         except GsimplexException as e:
             # print(e)
             problem.status = e.status
-    
-    def minimize(self, 
-                 problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
-                 pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
-                 **kwargs
-                 ):
-        """
-        Solve a minimization problem by converting it to a maximization problem.
-
-        :param problem: The LP problem to solve.
-        :type problem: LpProblem
-        :param start_basis: Optional starting basis or vertex.
-        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
-        :param pivot_rule: Pivot rule used during the simplex iterations.
-        :type pivot_rule: PivotRule
-        :param kwargs: Additional solver options.
-        :type kwargs: dict
-        """
-        
-        assert problem.sense == LpMinimize, "Tried to minimize a maximization problem!"
-        assert problem.objective
-
-        problem.setObjective(-problem.objective)
-        problem.sense = LpMaximize
-
-        self.maximize(problem=problem, 
-                      start_basis=start_basis,
-                      pivot_rule=pivot_rule,
-                      **kwargs)
-        
-        problem.setObjective(-problem.objective)
-        problem.sense = LpMinimize
 
     def get_auxiliary_problem(self, original: LpProblem) -> Tuple[LpProblem, Vertex]:
         """
@@ -313,14 +246,12 @@ class PrimalSimplex(ISimplex):
 
         return aux_problem, aux_vertex
 
-    def get_feasible_vertex(self, problem: LpProblem, pivot_rule: PivotRule) -> Tuple[Vertex, int]:
+    def get_feasible_vertex(self, problem: LpProblem) -> Tuple[Vertex, int]:
         """
         Compute a primal feasible basis vertex for the given problem.
 
         :param problem: The LP problem to make feasible.
         :type problem: LpProblem
-        :param pivot_rule: Pivot rule used for Phase I solves.
-        :type pivot_rule: PivotRule
         :return: A tuple containing a feasible vertex and the iteration count.
         :rtype: Tuple[Vertex, int]
         """
@@ -330,7 +261,7 @@ class PrimalSimplex(ISimplex):
         if aux_problem == problem:
             return aux_vertex, 0
 
-        aux_problem.solve(solver=self, start_basis=aux_vertex, pivot_rule=pivot_rule)
+        aux_problem.solve(solver=self, start_basis=aux_vertex)
         if aux_problem.status != LpStatusOptimal:
             raise UnFeasibleProblemException(
                 "Auxiliary problem unfeasible or unbounded"
@@ -364,21 +295,18 @@ class PrimalSimplex(ISimplex):
     
     def get_starting_point(self, 
                            problem: LpProblem,
-                           pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
                            ) -> Tuple[Optional[Vertex], int]:
         """
         Find a starting basis for the primal simplex solver.
 
         :param problem: The LP problem to initialize.
         :type problem: LpProblem
-        :param pivot_rule: Pivot rule used to obtain the starting point.
-        :type pivot_rule: PivotRule
         :return: A possibly feasible starting vertex and the iteration count.
         :rtype: Tuple[Optional[Vertex], int]
         """
 
         try:
-            return self.get_feasible_vertex(problem, pivot_rule=pivot_rule)
+            return self.get_feasible_vertex(problem)
         except GsimplexException as e:
             # print(e)
             return None, 0

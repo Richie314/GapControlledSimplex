@@ -9,8 +9,6 @@ from gsimplex.solvers.solver_interface import ISolver
 from gsimplex.constants import (
     DEFAULT_ABS_TOLERANCE, 
     DEFAULT_REL_TOLERANCE,
-    PivotRule, 
-    DEFAULT_PIVOT_RULE,
 )
 from gsimplex.tools.parser import ProblemParser
 
@@ -43,10 +41,9 @@ class LinearProgrammingTest:
         for constraint in list(self.problem.constraints.values()):
             assert constraint.name
 
-    def test(self, solver: ISolver, use_start_basis: bool = True, pivot: PivotRule = DEFAULT_PIVOT_RULE):
+    def test(self, solver: ISolver, use_start_basis: bool = True):
         self.problem.solve(solver, 
                            start_basis=self.basis if use_start_basis else None, 
-                           pivot_rule=pivot
                            )
         assert self.problem.status == LpSolutionOptimal, "Problem was not solved"
 

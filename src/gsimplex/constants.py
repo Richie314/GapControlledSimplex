@@ -14,3 +14,9 @@ DEFAULT_PIVOT_RULE = "dantzig"
 
 DEFAULT_MAX_ITERATIONS = 1_000
 '''Default value for the maximum number of iterations'''
+
+DEFAULT_ABS_GAP = DEFAULT_ABS_TOLERANCE
+'''Default value for the absolute gap between primal and dual point'''
+
+DEFAULT_REL_GAP = DEFAULT_REL_TOLERANCE
+'''Default value for the relative ga between primal and dual point'''

@@ -83,23 +83,24 @@ test_data = [
 
 @pytest.mark.parametrize("test_case", test_data)
 def test_primal_simplex_dantzig(test_case):
-    solver = PrimalSimplex()
-    test_case.test(solver, pivot='dantzig')
+    solver = PrimalSimplex(pivot_rule="dantzig")
+    test_case.test(solver)
 
 @pytest.mark.parametrize("test_case", test_data)
 def test_primal_simplex_bland(test_case):
-    solver = PrimalSimplex()
-    test_case.test(solver, pivot='bland')
-
-@pytest.mark.parametrize("test_case", test_data)
-def test_primal_simplex_phase_I_bland(test_case):
-    solver = PrimalSimplex()
-    test_case.test(solver, use_start_basis=False, pivot='bland')
+    solver = PrimalSimplex(pivot_rule="bland")
+    test_case.test(solver)
 
 @pytest.mark.parametrize("test_case", test_data)
 def test_primal_simplex_phase_I_dantzig(test_case):
-    solver = PrimalSimplex()
-    test_case.test(solver, use_start_basis=False, pivot='dantzig')
+    solver = PrimalSimplex(pivot_rule="dantzig")
+    test_case.test(solver, use_start_basis=False)
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_primal_simplex_phase_I_bland(test_case):
+    solver = PrimalSimplex(pivot_rule="bland")
+    test_case.test(solver, use_start_basis=False)
+
 
 """
 =============================================================
@@ -108,14 +109,15 @@ def test_primal_simplex_phase_I_dantzig(test_case):
 """
 
 @pytest.mark.parametrize("test_case", test_data)
-def test_dual_simplex_bland(test_case):
-    solver = DualSimplex(max_iterations=20)
-    test_case.test(solver, use_start_basis=False, pivot='bland')
+def test_dual_simplex_dantzig(test_case):
+    solver = DualSimplex(max_iterations=20, pivot_rule="dantzig")
+    test_case.test(solver, use_start_basis=False)
 
 @pytest.mark.parametrize("test_case", test_data)
-def test_dual_simplex_dantzig(test_case):
-    solver = DualSimplex(max_iterations=20)
-    test_case.test(solver, use_start_basis=False, pivot='dantzig')
+def test_dual_simplex_bland(test_case):
+    solver = DualSimplex(max_iterations=20, pivot_rule="bland")
+    test_case.test(solver, use_start_basis=False)
+
 
 """
 =============================================================
@@ -123,10 +125,13 @@ def test_dual_simplex_dantzig(test_case):
 =============================================================
 """
 
-'''
 
 @pytest.mark.parametrize("test_case", test_data)
-def test_gap_simplex(test_case):
-    solver = GapSimplex()
+def test_gap_simplex_dantzig(test_case):
+    solver = GapDoubleSimplex(pivot_rule="dantzig")
     test_case.test(solver)
-'''
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_gap_simplex_bland(test_case):
+    solver = GapDoubleSimplex(pivot_rule="bland")
+    test_case.test(solver)
