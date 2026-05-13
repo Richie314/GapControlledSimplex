@@ -7,6 +7,7 @@ import sys
 
 from gsimplex.benchmarks.plato import PlatoDownloader
 from gsimplex.benchmarks.netlib import NetLibDownloader
+from gsimplex.benchmarks.miplib import MipLibDownloader
 
 async def download_plato_benchmarks(dir: Optional[str] = None, quiet: bool = False) -> bool:
     downloader = PlatoDownloader(benchmark_dir=dir, quiet=quiet)
@@ -62,29 +63,40 @@ async def download_netlib_benchmarks(dir: Optional[str] = None, quiet: bool = Fa
 
     return len(results) == len(problem_names)
 
+async def download_miplib_benchmarks(dir: Optional[str] = None, quiet: bool = False) -> bool:
+    downloader = MipLibDownloader(benchmark_dir=dir, quiet=quiet)
+    
+    await downloader.download_miplib_benchmarks_async()
+    return True
+
 def main():
-    parser = argparse.ArgumentParser(description="Download Plato or Netlib benchmarks")
-    parser.add_argument('--quiet', action='store_true', help='Run in quiet mode')
+    parser = argparse.ArgumentParser(description="Download Plato, Netlib or MipLib benchmarks")
     parser.add_argument('--dir', type=str, default=None, help='Directory to save benchmarks')
-    parser.add_argument('--plato', type=bool, default=True, help="Download plato benchmarks")
-    parser.add_argument('--netlib', type=bool, default=True, help="Download plato benchmarks")
+    parser.add_argument('--quiet',  action='store_true', help='Run in quiet mode (don\'t print anything to stdout)')
+    parser.add_argument('--plato',  action='store_true', help="Download Plato benchmarks")
+    parser.add_argument('--netlib', action='store_true', help="Download NetLib benchmarks")
+    parser.add_argument('--miplib', action='store_true', help="Download MipLib benchmarks")
     
     args = parser.parse_args()
 
-    assert args.plato or args.netlib, "You must download at least one of the benchmarks"
+    assert args.plato or args.netlib or args.miplib, "You must specify at least one of the benchmarks"
 
     if args.plato:
         esit_plato = asyncio.run(download_plato_benchmarks(quiet=args.quiet, dir=args.dir))
     else:
         esit_plato = True
 
-    
     if args.netlib:
         esit_netlib = asyncio.run(download_netlib_benchmarks(quiet=args.quiet, dir=args.dir))
     else:
         esit_netlib = True
 
-    return 0 if esit_plato and esit_netlib else 1
+    if args.miplib:
+        esit_miplib = asyncio.run(download_miplib_benchmarks(quiet=args.quiet, dir=args.dir))
+    else:
+        esit_miplib = True
+
+    return 0 if esit_plato and esit_netlib and esit_miplib else 1
 
 if __name__ == "__main__":
     sys.exit(main())

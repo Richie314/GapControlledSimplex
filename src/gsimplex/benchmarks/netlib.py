@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
@@ -18,7 +16,7 @@ class NetLibDownloader(Downloader):
         return await self.download_many_async(files, post_process=NetLibDownloader.post_process_download)
     
     @staticmethod
-    def post_process_download(netlib_mps_file: str|Path) -> str:
+    def post_process_download(netlib_mps_file: str|Path) -> Optional[str]:
         downloaded_file = Path(netlib_mps_file)
         if not downloaded_file.exists():
             raise FileNotFoundError(f"Downloaded file path mismatch: {downloaded_file} not found!")
@@ -26,8 +24,12 @@ class NetLibDownloader(Downloader):
         download_dir = downloaded_file.parent
         target_file = download_dir / downloaded_file.name.removesuffix('.netlib')
 
-        expand_mps(str(downloaded_file), str(target_file))
-        downloaded_file.unlink()
-
-        assert target_file.exists()
-        return str(target_file)
+        try:
+            expand_mps(str(downloaded_file), str(target_file))
+            assert target_file.exists()
+            return str(target_file)
+        except Exception as e:
+            print(e)
+            return None
+        finally:
+            downloaded_file.unlink()

@@ -66,36 +66,34 @@ print("Solution:", [var.varValue for var in problem.variables()]) # [1.0, 1.0]
 ## Download benchmark problems
 
 This package installs a command-line helper called `gsimplex-download-benchmarks`.
-It downloads the Plato and Netlib benchmark sets into a local directory, so you can test the solver on real LP problems.
+It can download Plato, Netlib and [MipLib](https://miplib.zib.de/index.html) benchmark sets into a local directory, so you can test the solver on real LP problems.
 
-By default, benchmark files are saved under the `benchmark/` directory in the current working directory. Plato files are stored in `benchmark/plato/`, and Netlib files are stored in `benchmark/netlib/`.
+By default, benchmark files are saved under the `benchmark/` directory in the current working directory.
+Plato files are stored in `benchmark/plato/`, Netlib files are stored in `benchmark/netlib/` and MipLib files are stored in `benchmark/miplib/`.
 
-### Download all benchmarks
-
-```bash
-gsimplex-download-benchmarks
-```
-
-### Download only one benchmark set
+A script is provided to download the desired benchmarks.
 
 ```bash
-gsimplex-download-benchmarks --plato True --netlib False
-# or
-gsimplex-download-benchmarks --plato False --netlib True
-```
+# Will download only Plato benchmarks
+gsimplex-download-benchmarks --plato
 
-> Note: the CLI uses boolean flags for `--plato` and `--netlib`, so set the one you want to disable to `False`.
+# Will download only Netlib benchmarks
+gsimplex-download-benchmarks --netlib
+
+# Will download both Plato and MipLib benchmarks
+gsimplex-download-benchmarks --plato --miplib
+```
 
 ### Change the destination directory
 
 ```bash
-gsimplex-download-benchmarks --dir benchmark
+gsimplex-download-benchmarks --plato --dir benchmark
 ```
 
 ### Quiet mode
 
 ```bash
-gsimplex-download-benchmarks --quiet
+gsimplex-download-benchmarks --plato --quiet
 ```
 
 If you installed the package editable with `pip install -e .`, the command will be available immediately.
