@@ -12,10 +12,34 @@ The current release supports continuous linear programming problems; mixed-integ
 
 ## Features
 
-- `pulp` compatible solver backend
-- Gap-controlled primal/dual simplex algorithms
-- Easy installation from PyPI or source
-- Built-in benchmark downloader for Plato and Netlib test sets
+This package provides three main solver implementations in `gsimplex.solvers`:
+
+- [`PrimalSimplex`](./src/gsimplex/solvers/primal_simplex.py)
+  - Standard primal simplex algorithm.
+  - Parameters:
+    - `max_iterations`: maximum number of simplex iterations (default configured by package).
+    - `abs_eps`: absolute tolerance used for feasibility and optimality checks.
+    - `rel_eps`: relative tolerance for numerical comparisons.
+    - `pivot_rule`: pivot selection strategy, typically `"dantzig"` by default; use `"bland"` to avoid cycling.
+
+- [`DualSimplex`](./src/gsimplex/solvers/dual_simplex.py)
+  - Dual simplex algorithm for problems with a dual-feasible starting basis.
+  - Parameters:
+    - `max_iterations`: maximum number of simplex iterations.
+    - `abs_eps`: absolute tolerance for primal/dual feasibility checking.
+    - `rel_eps`: relative tolerance for numerical comparisons.
+    - `pivot_rule`: pivot selection strategy, with `"bland"` available for Bland's rule.
+
+- [`GapDoubleSimplex`](./src/gsimplex/solvers/gap_simplex.py)
+  - Combined primal/dual gap-controlled solver.
+  - Runs primal and dual simplex iterations together and stops when the primal-dual gap is small enough.
+  - Parameters:
+    - `max_iterations`: maximum total iterations before giving up.
+    - `abs_eps`: absolute tolerance for feasibility and basis checks.
+    - `rel_eps`: relative tolerance for numerical comparisons.
+    - `abs_gap`: absolute gap threshold for early termination.
+    - `rel_gap`: relative gap threshold for early termination.
+    - `pivot_rule`: pivot selection strategy for both primal and dual steps.
 
 ## Installation
 
