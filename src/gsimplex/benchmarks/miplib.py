@@ -1,6 +1,8 @@
 import tempfile
 import asyncio
 import zipfile
+import aiofiles
+import json
 from pathlib import Path
 from typing import Union
 
@@ -9,6 +11,7 @@ from gsimplex.benchmarks.downloader import Downloader
 
 class MipLibDownloader(Downloader):
     COLLECTION_URL = "https://miplib.zib.de/downloads/collection.zip"
+    SOLUTIONS_URL =  "https://miplib.zib.de/downloads/miplib2017-v36.solu"
     
     async def download_miplib_benchmarks_async(self) -> None:
 
@@ -19,6 +22,8 @@ class MipLibDownloader(Downloader):
             tmp_path = tmp.name
     
         try:
+            await self.download_solutions()
+            
             result = await self.download_async(self.COLLECTION_URL, tmp_path, cached_filename="collection.zip")
             assert result is not None, "Problem collection zip file download failed"
             file = Path(result[0])
@@ -37,6 +42,10 @@ class MipLibDownloader(Downloader):
             
             if not zip_esit:
                 return
+            
+        except Exception as e:
+            if not self._quiet:
+                print(e)
         finally:
             tmp_path = Path(tmp_path)
             if tmp_path.exists():
@@ -71,3 +80,49 @@ class MipLibDownloader(Downloader):
             if not quiet:
                 print(e)
             return False
+        
+    async def download_solutions(self) -> bool:
+        miplib_dir = self._benchmark_dir / "miplib"
+        soltions_file = miplib_dir / 'solutions.solu'
+        otuput_file = miplib_dir / 'solutions.json'
+
+        result = await self.download_async(self.SOLUTIONS_URL, str(soltions_file), cached_filename="miplib/solutions.json")
+        if result is None:
+            return False
+        
+        try:
+            async with aiofiles.open(result[0], 'r') as f:
+                content = await f.read()
+                opt = self.parse_solu(content)
+
+            json_str = json.dumps(opt)
+            async with aiofiles.open(otuput_file, 'w') as f:
+                otuput_file.write_text(json_str)
+
+            return True
+        except:
+            return False
+
+    @staticmethod
+    def parse_solu(content: str) -> dict[str, float]:
+        optimal: dict[str, float] = {}
+    
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or not line.startswith("=opt="):
+                continue
+    
+            parts = line.split()
+            # parts[0] == "=opt=", parts[1] == problem name, parts[2] == value
+            if len(parts) < 3:
+                continue
+    
+            _, name, raw_value = parts[0], parts[1], parts[2]
+            try:
+                value = float(raw_value)
+            except ValueError:
+                continue
+    
+            optimal[name] = value
+    
+        return optimal
