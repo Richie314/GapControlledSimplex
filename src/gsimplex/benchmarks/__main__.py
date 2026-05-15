@@ -10,6 +10,16 @@ from gsimplex.benchmarks.netlib import NetLibDownloader
 from gsimplex.benchmarks.miplib import MipLibDownloader
 
 async def download_plato_benchmarks(dir: Optional[str] = None, quiet: bool = False) -> bool:
+    """
+    Download all Plato benchmark problems.
+
+    :param dir: Directory to save the benchmarks. If None, uses default.
+    :type dir: Optional[str]
+    :param quiet: If True, suppress output.
+    :type quiet: bool
+    :return: True if all downloads succeeded, False otherwise.
+    :rtype: bool
+    """
     downloader = PlatoDownloader(benchmark_dir=dir, quiet=quiet)
     
     # All Plato problems (flattened)
@@ -34,6 +44,16 @@ async def download_plato_benchmarks(dir: Optional[str] = None, quiet: bool = Fal
 
   
 async def download_netlib_benchmarks(dir: Optional[str] = None, quiet: bool = False) -> bool:
+    """
+    Download all Netlib benchmark problems.
+
+    :param dir: Directory to save the benchmarks. If None, uses default.
+    :type dir: Optional[str]
+    :param quiet: If True, suppress output.
+    :type quiet: bool
+    :return: True if all downloads succeeded, False otherwise.
+    :rtype: bool
+    """
     downloader = NetLibDownloader(benchmark_dir=dir, quiet=quiet)
     
     # All Netlib problems
@@ -64,6 +84,16 @@ async def download_netlib_benchmarks(dir: Optional[str] = None, quiet: bool = Fa
     return len(results) == len(problem_names)
 
 async def download_miplib_benchmarks(dir: Optional[str] = None, quiet: bool = False) -> bool:
+    """
+    Download MIPLIB benchmark collection.
+
+    :param dir: Directory to save the benchmarks. If None, uses default.
+    :type dir: Optional[str]
+    :param quiet: If True, suppress output.
+    :type quiet: bool
+    :return: True if download succeeded, False otherwise.
+    :rtype: bool
+    """
     downloader = MipLibDownloader(benchmark_dir=dir, quiet=quiet)
     
     await downloader.download_miplib_benchmarks_async()

@@ -14,6 +14,9 @@ class MipLibDownloader(Downloader):
     SOLUTIONS_URL =  "https://miplib.zib.de/downloads/miplib2017-v36.solu"
     
     async def download_miplib_benchmarks_async(self) -> None:
+        """
+        Asynchronously download and extract the MIPLIB benchmark collection.
+        """
 
         miplib_dir = self._benchmark_dir / "miplib"
         miplib_dir.mkdir(exist_ok=True, parents=True)
@@ -56,6 +59,18 @@ class MipLibDownloader(Downloader):
 
     @staticmethod
     def _extract_collection(tmp_path: Union[Path, str], dest_dir: Path, quiet: bool = False) -> bool:
+        """
+        Extract the MIPLIB collection zip file to the destination directory.
+
+        :param tmp_path: Path to the zip file.
+        :type tmp_path: Union[Path, str]
+        :param dest_dir: Destination directory for extraction.
+        :type dest_dir: Path
+        :param quiet: If True, suppress progress messages.
+        :type quiet: bool
+        :return: True if extraction succeeded, False otherwise.
+        :rtype: bool
+        """
         
         if not quiet:
             print(f"Extracting to: {dest_dir}")
@@ -82,6 +97,12 @@ class MipLibDownloader(Downloader):
             return False
         
     async def download_solutions(self) -> bool:
+        """
+        Download and parse the MIPLIB solutions file.
+
+        :return: True if download and parsing succeeded, False otherwise.
+        :rtype: bool
+        """
         miplib_dir = self._benchmark_dir / "miplib"
         soltions_file = miplib_dir / 'solutions.solu'
         otuput_file = miplib_dir / 'solutions.json'
@@ -105,6 +126,14 @@ class MipLibDownloader(Downloader):
 
     @staticmethod
     def parse_solu(content: str) -> dict[str, float]:
+        """
+        Parse the MIPLIB solutions file content into a dictionary.
+
+        :param content: The content of the solutions file.
+        :type content: str
+        :return: A dictionary mapping problem names to optimal values.
+        :rtype: dict[str, float]
+        """
         optimal: dict[str, float] = {}
     
         for line in content.splitlines():

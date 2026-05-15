@@ -4,6 +4,14 @@ from pulp.constants import LpConstraintEQ, LpConstraintGE
 from gsimplex.vertex import Vertex
 
 def clone_problem(lp: LpProblem) -> LpProblem:
+    """
+    Create a deep copy of a linear programming problem.
+
+    :param lp: The original LP problem to clone.
+    :type lp: LpProblem
+    :return: A new LP problem instance with copied variables, objective, and constraints.
+    :rtype: LpProblem
+    """
     
     assert lp.objective
 

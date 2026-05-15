@@ -202,7 +202,7 @@ class Vertex(Basis):
 
         return gap, rel_gap, dual_val, primal_val
     
-    def __sub__(self, other: 'Vertex') -> Tuple[float, Optional[float], float, float]:
+    def __sub__(self, other: 'Vertex') -> Tuple[float, float, float, float]:
         return Vertex.gap(self, other)
     
     def __str__(self) -> str:
