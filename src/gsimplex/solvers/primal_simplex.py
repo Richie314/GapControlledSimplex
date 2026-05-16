@@ -48,7 +48,6 @@ class PrimalSimplex(ISimplex):
         entering, _ = min(ratios, key=lambda x: x[1])
         return entering
 
-
     def get_leaving_constraint(self, 
                                v: Vertex, 
                                d: Optional[Union[np.ndarray, List[float]]] = None,
@@ -292,7 +291,6 @@ class PrimalSimplex(ISimplex):
         feasible_solution = Vertex(problem, *feasible_solution_constraints)
         return feasible_solution, 0
     
-    
     def get_starting_point(self, 
                            problem: LpProblem,
                            ) -> Tuple[Optional[Vertex], int]:
@@ -310,3 +308,52 @@ class PrimalSimplex(ISimplex):
         except GsimplexException as e:
             # print(e)
             return None, 0
+        
+    def _nearest_primal_vertex(self, v: Vertex) -> bool:
+        while True:
+
+            unfeasible_contraints = v.primal_infeasible_constraints(eps=self.abs_tol)
+            if len(unfeasible_contraints) == 0:
+                return True # Point is primal feasible
+            
+            # Same as entering constraint in Dual Simplex
+            if self.pivot_rule == "bland":
+                # First infeasible constraint
+                entering, _ = unfeasible_contraints[0] 
+            else:
+                # Least infeasible contraint
+                entering, _ = max(unfeasible_contraints, key=lambda x: x[1])
+
+                
+            if self.pivot_rule == "bland":
+                d = v.W[:, v.index(entering)]
+            else:
+                # A_B @ d = Ap --> d = A_B^-1 @ Ap = -W @ Ap 
+                d = -v.W @ Vertex.constraint_to_row(entering, v.problem)
+
+            leaving: Optional[LpConstraint] = None
+            if self.pivot_rule == 'bland':
+                ratios: List[Tuple[LpConstraint, float]] = []
+                for c in v.non_basis:
+                    Ai = Vertex.constraint_to_row(c, v.problem)
+                    slack = Vertex.slack(c)
+
+                    den = float(Ai @ d)
+                    if den > self.abs_tol:
+                        ratios.append((c, slack / den))
+
+                if len(ratios) > 0:
+                    leaving, _ = min(ratios, key=lambda x: x[1])
+            else:
+                for constraint in v.non_basis:
+                    pivot = d @ Vertex.constraint_to_row(constraint, v.problem)
+                    if pivot < -self.abs_tol:
+                        leaving = constraint
+                        break
+
+            if leaving is None:
+                raise UnboundedProblemException(
+                    "Phase I dual-problem is unbounded",
+                )
+                
+            v.swap(entering, leaving)

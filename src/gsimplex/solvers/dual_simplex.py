@@ -41,6 +41,7 @@ class DualSimplex(ISimplex):
             return None
 
         leaving, _ = min(candidates, key=lambda x: x[1])
+        
         return leaving
     
     
@@ -179,7 +180,8 @@ class DualSimplex(ISimplex):
 
 
     def phase_one_solve(self, 
-                        v: Vertex, 
+                        p: LpProblem, 
+                        v: Union[List[LpConstraint], Vertex, List[str]],
                         ) -> Tuple[Vertex, int]:
         """
         Perform Phase I iterations to obtain a dual-feasible starting vertex.
@@ -189,6 +191,9 @@ class DualSimplex(ISimplex):
         :return: A tuple with a dual-feasible vertex and the number of iterations used.
         :rtype: Tuple[Vertex, int]
         """
+
+        if not isinstance(v, Vertex):
+            v = Vertex(p, *[p.constraints[n] if isinstance(n, str) else n for n in v])
 
         for it in range(self.max_iterations):
             dual_infeas = v.dual_infeasible_contraints(eps=self.abs_tol)
@@ -200,38 +205,24 @@ class DualSimplex(ISimplex):
                 leaving, _ = dual_infeas[0]
             else:
                 leaving, _ = max(dual_infeas, key=lambda x: abs(x[1]))
-            assert leaving in v, "Leaving index must be in vertex"
 
-            if self.pivot_rule == 'bland':
-                d = v.W[:, v.index(leaving)]
-            else:
-                # A_B @ d = Ap --> d = A_B^-1 @ Ap = -W @ Ap 
-                d = -v.W @ Vertex.constraint_to_row(leaving, v.problem)
+            d = v.W[:, v.index(leaving)]
+         
+            ratios: List[Tuple[LpConstraint, float]] = []
+            for c in v.non_basis:
+                Ai = Vertex.constraint_to_row(c, v.problem)
+                slack = Vertex.slack(c)
 
-            entering: Optional[LpConstraint] = None
-            if self.pivot_rule == 'bland':
-                ratios: List[Tuple[LpConstraint, float]] = []
-                for c in v.non_basis:
-                    Ai = Vertex.constraint_to_row(c, v.problem)
-                    slack = Vertex.slack(c)
+                den = float(Ai @ d)
+                if den > self.abs_tol:
+                    ratios.append((c, slack / den))
 
-                    den = float(Ai @ d)
-                    if den > self.abs_tol:
-                        ratios.append((c, slack / den))
-
-                if len(ratios) > 0:
-                    entering, _ = min(ratios, key=lambda x: x[1])
-            else:
-                for constraint in v.non_basis:
-                    pivot = d @ Vertex.constraint_to_row(constraint, v.problem)
-                    if pivot < -self.abs_tol:
-                        entering = constraint
-                        break
-
-            if entering is None:
+            if len(ratios) == 0:
                 raise UnboundedProblemException(
                     "Phase I dual-problem is unbounded",
                 )
+
+            entering, _ = min(ratios, key=lambda x: x[1])
                 
             v.swap(entering, leaving)
 
@@ -257,7 +248,7 @@ class DualSimplex(ISimplex):
         constraints = list(problem.constraints.values())
         initial_point = Vertex(problem, *constraints[:n])
         try:
-            return self.phase_one_solve(initial_point)
+            return self.phase_one_solve(problem, initial_point)
         except GsimplexException as e:
             # print(e)
             return None, 0

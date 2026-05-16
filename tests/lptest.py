@@ -18,6 +18,7 @@ class LinearProgrammingTest:
                  expected_solution: Optional[Union[np.ndarray, List[float]]] = None, 
                  expected_value: Optional[float] = None,
                  basis: Optional[Union[Vertex, List[LpConstraint], List[str]]] = None,
+                 sense: int = LpMaximize,
                  ):
         self.expected_solution = np.array(expected_solution) if expected_solution is not None else None
         self.expected_value = expected_value
@@ -26,7 +27,7 @@ class LinearProgrammingTest:
         filename = Path("tests") / filename
         assert filename.exists(), f"Problem {filename} not found!"
 
-        self.problem: LpProblem = ProblemParser.load_mps_from_file(filename, sense=LpMaximize)
+        self.problem: LpProblem = ProblemParser.load_mps_from_file(filename, sense=sense)
         assert self.problem.numConstraints() >= self.problem.numVariables()
 
         if self.basis is not None:
