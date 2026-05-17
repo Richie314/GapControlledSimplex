@@ -1,12 +1,15 @@
 from typing import Optional, Tuple, List, Union
-from pulp import LpProblem, LpConstraint
-from pulp.constants import LpMaximize, LpStatusOptimal
+from pulp import (
+    LpProblem, LpConstraint,
+    LpMaximize, LpStatusOptimal,
+)
 
 from gsimplex.solvers.primal_simplex import PrimalSimplex
 from gsimplex.solvers.dual_simplex import DualSimplex
 from gsimplex.vertex import Vertex
 from gsimplex.exception import *
 from gsimplex.constants import *
+from gsimplex.tools.problem import get_different_constraints
 
 
 class CrissCross(PrimalSimplex, DualSimplex):
@@ -22,9 +25,8 @@ class CrissCross(PrimalSimplex, DualSimplex):
         even when the initial point is infeasible.
         """
 
-        n = problem.numVariables()
-        constraints = list(problem.constraints.values())
-        initial_point = Vertex(problem, *constraints[:n])
+        initial_constraints = get_different_constraints(problem)
+        initial_point = Vertex(problem, *initial_constraints)
         return initial_point, 0
 
     def maximize(self,

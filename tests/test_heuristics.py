@@ -1,7 +1,6 @@
 import pytest
 from .test_simple import test_data
 
-from gsimplex.vertex import Vertex
 from gsimplex.solvers import (
     PrimalSimplex,
     DualSimplex,

@@ -1,5 +1,5 @@
 import pytest
-from pulp.constants import LpMaximize, LpMinimize
+from pulp import LpMaximize, LpMinimize
 
 from .lptest import LinearProgrammingTest
 from gsimplex.solvers import (
@@ -9,7 +9,7 @@ from gsimplex.solvers import (
     CrissCross,
 )
 
-"""
+
 test_data = [
     LinearProgrammingTest(
         filename="problems/transportation.mps",
@@ -37,7 +37,7 @@ test_data = [
         expected_value=420,
     ),
 ]
-"""
+
 
 """
 =============================================================
@@ -57,13 +57,4 @@ def test_primal_simplex_bland(test_case):
     solver = PrimalSimplex(pivot_rule="bland")
     test_case.test(solver)
 
-@pytest.mark.parametrize("test_case", test_data)
-def test_primal_simplex_phase_I_dantzig(test_case):
-    solver = PrimalSimplex(pivot_rule="dantzig")
-    test_case.test(solver, use_start_basis=False)
-
-@pytest.mark.parametrize("test_case", test_data)
-def test_primal_simplex_phase_I_bland(test_case):
-    solver = PrimalSimplex(pivot_rule="bland")
-    test_case.test(solver, use_start_basis=False)
 """

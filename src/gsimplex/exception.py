@@ -1,4 +1,4 @@
-from pulp.constants import (
+from pulp import (
     LpStatusNotSolved, 
     LpStatusUnbounded, 
     LpStatusInfeasible,

@@ -1,5 +1,7 @@
-from pulp import LpVariable, LpConstraint, LpProblem
-from pulp.constants import LpSolutionOptimal, LpMaximize
+from pulp import (
+    LpVariable, LpConstraint, LpProblem,
+    LpSolutionOptimal, LpMaximize,
+)
 
 from gsimplex.constants import DEFAULT_ABS_TOLERANCE
 from gsimplex.solvers.primal_simplex import PrimalSimplex

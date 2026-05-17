@@ -1,7 +1,9 @@
 import numpy as np
 from typing import Union, List, Optional
-from pulp import LpProblem, LpConstraint
-from pulp.constants import LpSolutionOptimal, LpMaximize
+from pulp import (
+    LpProblem, LpConstraint,
+    LpSolutionOptimal, LpMaximize,
+)
 from pathlib import Path
 
 from gsimplex.vertex import Vertex
@@ -10,7 +12,7 @@ from gsimplex.constants import (
     DEFAULT_ABS_TOLERANCE, 
     DEFAULT_REL_TOLERANCE,
 )
-from gsimplex.tools.parser import ProblemParser
+from gsimplex.tools import ProblemParser, get_objective_function
 
 class LinearProgrammingTest:
     def __init__(self, 
@@ -28,7 +30,7 @@ class LinearProgrammingTest:
         assert filename.exists(), f"Problem {filename} not found!"
 
         self.problem: LpProblem = ProblemParser.load_mps_from_file(filename, sense=sense)
-        assert self.problem.numConstraints() >= self.problem.numVariables()
+
 
         if self.basis is not None:
             assert self.problem.numVariables() == len(self.basis)
@@ -36,7 +38,7 @@ class LinearProgrammingTest:
         if self.expected_solution is not None:
             assert self.problem.numVariables() == len(self.expected_solution)
             if self.expected_value is None:
-                c = Vertex.get_objective_function(self.problem)
+                c = get_objective_function(self.problem)
                 self.expected_value = c @ self.expected_solution
 
         for constraint in list(self.problem.constraints.values()):

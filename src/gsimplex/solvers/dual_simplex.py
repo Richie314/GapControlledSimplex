@@ -1,11 +1,14 @@
 from typing import Optional, Tuple, List, Union
-from pulp import LpProblem, LpConstraint
-from pulp.constants import LpStatusOptimal, LpMaximize
+from pulp import (
+    LpProblem, LpConstraint,
+    LpStatusOptimal, LpMaximize,
+)
 import numpy as np
 
 from gsimplex.solvers.simplex_interface import ISimplex
 from gsimplex.vertex import Vertex
 from gsimplex.exception import *
+from gsimplex.tools.problem import constraint_to_row, get_different_constraints
 
 class DualSimplex(ISimplex):
     """
@@ -84,7 +87,7 @@ class DualSimplex(ISimplex):
         :rtype: np.ndarray
         """
         
-        Ak = Vertex.constraint_to_row(constraint, v.problem)
+        Ak, _ = constraint_to_row(constraint, v.problem)
         return Ak
 
     def _single_iteration(self, point: "Vertex") -> "Vertex":
@@ -210,7 +213,7 @@ class DualSimplex(ISimplex):
          
             ratios: List[Tuple[LpConstraint, float]] = []
             for c in v.non_basis:
-                Ai = Vertex.constraint_to_row(c, v.problem)
+                Ai, bi = constraint_to_row(c, v.problem)
                 slack = Vertex.slack(c)
 
                 den = float(Ai @ d)
@@ -242,11 +245,9 @@ class DualSimplex(ISimplex):
         :return: A dual-feasible starting vertex and the iteration count, or (None, 0).
         :rtype: Tuple[Optional[Vertex], int]
         """
-
-        n = problem.numVariables()
     
-        constraints = list(problem.constraints.values())
-        initial_point = Vertex(problem, *constraints[:n])
+        initial_constraints = get_different_constraints(problem)
+        initial_point = Vertex(problem, *initial_constraints)
         try:
             return self.phase_one_solve(problem, initial_point)
         except GsimplexException as e:

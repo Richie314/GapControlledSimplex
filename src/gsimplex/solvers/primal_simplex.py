@@ -1,6 +1,6 @@
 from typing import Optional, Tuple, List, Union
-from pulp import LpProblem, LpConstraint, LpVariable
-from pulp.constants import ( 
+from pulp import ( 
+    LpProblem, LpConstraint, LpVariable,
     LpConstraintEQ, LpConstraintLE, LpConstraintGE,
     LpMinimize, LpMaximize, LpStatusOptimal,
 )
@@ -9,6 +9,7 @@ import numpy as np
 from gsimplex.solvers.simplex_interface import ISimplex
 from gsimplex.vertex import Vertex
 from gsimplex.exception import *
+from gsimplex.tools.problem import constraint_to_row, get_different_constraints
 
 
 class PrimalSimplex(ISimplex):
@@ -35,7 +36,7 @@ class PrimalSimplex(ISimplex):
 
         ratios: List[Tuple[LpConstraint, float]] = []
         for c in v.non_basis:
-            Ai = Vertex.constraint_to_row(c, v.problem)
+            Ai, bi = constraint_to_row(c, v.problem)
             slack = Vertex.slack(c)
 
             den = float(Ai @ d)
@@ -75,7 +76,7 @@ class PrimalSimplex(ISimplex):
 
         return leaving
 
-    def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
+    def get_moving_direction(self, v: "Vertex", constraint: LpConstraint) -> np.ndarray:
         """
         Compute the moving direction for a candidate leaving constraint.
 
@@ -179,7 +180,7 @@ class PrimalSimplex(ISimplex):
         """
         n = original.numVariables()
 
-        initial_basis = list(original.constraints.values())[:n]
+        initial_basis = get_different_constraints(original)
         initial_vertex = Vertex(original, *initial_basis)
 
         infeas = initial_vertex.primal_infeasible_constraints(eps=self.abs_tol)
@@ -293,7 +294,7 @@ class PrimalSimplex(ISimplex):
     
     def get_starting_point(self, 
                            problem: LpProblem,
-                           ) -> Tuple[Optional[Vertex], int]:
+                           ) -> Tuple[Optional["Vertex"], int]:
         """
         Find a starting basis for the primal simplex solver.
 
@@ -309,7 +310,7 @@ class PrimalSimplex(ISimplex):
             # print(e)
             return None, 0
         
-    def _nearest_primal_vertex(self, v: Vertex) -> bool:
+    def _nearest_primal_vertex(self, v: "Vertex") -> bool:
         while True:
 
             unfeasible_contraints = v.primal_infeasible_constraints(eps=self.abs_tol)
@@ -329,13 +330,14 @@ class PrimalSimplex(ISimplex):
                 d = v.W[:, v.index(entering)]
             else:
                 # A_B @ d = Ap --> d = A_B^-1 @ Ap = -W @ Ap 
-                d = -v.W @ Vertex.constraint_to_row(entering, v.problem)
+                Ap, _ = constraint_to_row(entering, v.problem)
+                d = -v.W @ Ap
 
             leaving: Optional[LpConstraint] = None
             if self.pivot_rule == 'bland':
                 ratios: List[Tuple[LpConstraint, float]] = []
                 for c in v.non_basis:
-                    Ai = Vertex.constraint_to_row(c, v.problem)
+                    Ai, bi = constraint_to_row(c, v.problem)
                     slack = Vertex.slack(c)
 
                     den = float(Ai @ d)
@@ -346,7 +348,8 @@ class PrimalSimplex(ISimplex):
                     leaving, _ = min(ratios, key=lambda x: x[1])
             else:
                 for constraint in v.non_basis:
-                    pivot = d @ Vertex.constraint_to_row(constraint, v.problem)
+                    Ak, _ = constraint_to_row(constraint, v.problem)
+                    pivot = d @ Ak
                     if pivot < -self.abs_tol:
                         leaving = constraint
                         break

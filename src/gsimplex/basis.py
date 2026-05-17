@@ -1,7 +1,13 @@
-from pulp import LpProblem, LpConstraint, LpVariable
-from pulp.constants import LpConstraintEQ, LpConstraintLE, LpConstraintGE
+from pulp import (
+    LpProblem, LpConstraint, LpVariable,
+    LpConstraintEQ, LpConstraintLE, LpConstraintGE,
+)
 from typing import List, Tuple, Optional, Union
 import numpy as np
+
+from gsimplex.tools.algebra import rows_are_same
+from gsimplex.tools.problem import constraint_to_row, get_objective_function
+from gsimplex.exception import UnFeasibleProblemException
 
 class ConstraintSet(List[LpConstraint]):
     """
@@ -21,8 +27,8 @@ class ConstraintSet(List[LpConstraint]):
         :rtype: Tuple[np.ndarray, np.ndarray]
         """
 
-        a_B = np.array([ConstraintSet.constraint_to_row(constraint, problem) for constraint in self])
-        b_B = np.array([ConstraintSet.constraint_to_linear_term(constraint) for constraint in self])
+        a_B = np.array([constraint_to_row(constraint, problem)[0] for constraint in self])
+        b_B = np.array([constraint_to_row(constraint, problem)[1] for constraint in self])
         return a_B, b_B
 
     def _compute_primal_point(self, problem: LpProblem) -> np.ndarray:
@@ -57,7 +63,7 @@ class ConstraintSet(List[LpConstraint]):
         m = problem.numConstraints()
         assert len(self) <= m, "Too many constraints in basis"
 
-        c = Basis.get_objective_function(problem)
+        c = get_objective_function(problem)
         assert len(c) == n
 
         a_B, _ = self._compute_system(problem)
@@ -65,82 +71,6 @@ class ConstraintSet(List[LpConstraint]):
 
         return y_B
     
-    @staticmethod
-    def __get_constraint_sense(constraint: LpConstraint, 
-                               convert_eq_to: int = LpConstraintLE,
-                               ) -> int:
-        """
-        Extracts the sense from a `LpConstraint`.
-
-        :param constraint: The constraint to extract the sense from.
-        :type constraint: LpConstraint
-        :param convert_eq_to: How to treat equality constraints when converting them.
-        :type convert_eq_to: int
-        :return: Either `pulp.LpConstraintGE` or `pulp.LpConstraintLE`.
-        :rtype: int
-        """
-
-        sense = constraint.sense
-        if sense == LpConstraintEQ:
-            sense = convert_eq_to
-        
-        if sense != LpConstraintLE and sense != LpConstraintGE:
-            raise ValueError(f"Unsupported constraint sense: {constraint.sense}")
-        
-        return sense
-    
-    @staticmethod
-    def constraint_to_row(constraint: LpConstraint, 
-                          problem: LpProblem, 
-                          convert_eq_to: int = LpConstraintLE,
-                          ) -> np.ndarray:
-        """
-        Convert a constraint to a numpy array of coefficients corresponding to the given variables.
-
-        :param constraint: The constraint to convert.
-        :type constraint: LpConstraint
-        :param problem: The linear programming problem containing the variables.
-        :type problem: LpProblem
-        :param convert_eq_to: How to treat equality constraints when converting them.
-        :type convert_eq_to: int
-        :return: A numpy vector of coefficients corresponding to problem variables.
-        :rtype: np.ndarray
-        """
-
-        sense = ConstraintSet.__get_constraint_sense(constraint, convert_eq_to)
-        return -sense * np.array([constraint.get(var, 0) for var in problem.variables()])
-    
-    @staticmethod
-    def constraint_to_linear_term(constraint: LpConstraint, 
-                                  convert_eq_to: int = LpConstraintLE,
-                                  ) -> float:
-        """
-        Extract the linear term from a constraint in the form Ax <= b.
-
-        :param constraint: The constraint to convert.
-        :type constraint: LpConstraint
-        :param convert_eq_to: How to treat equality constraints when converting them.
-        :type convert_eq_to: int
-        :return: The right-hand side constant term for the converted constraint.
-        :rtype: float
-        """
-
-        """
-        Pulp memorizes data in the form Ax + constant <=> 0
-        Hence b is
-            * -constant if <=
-            *  constant if >=
-            * any of the above if == (treated as convert_eq_to says)
-        """
-        sense = ConstraintSet.__get_constraint_sense(constraint, convert_eq_to)
-        
-        """
-        if sense == LpConstraintLE:
-            return -constraint.constant
-        else:
-            return constraint.constant
-        """
-        return sense * constraint.constant
     
     def has_named_constraints(self, names: List[str]) -> bool:
         """
@@ -156,20 +86,6 @@ class ConstraintSet(List[LpConstraint]):
                 return True
             
         return False
-    
-    @staticmethod
-    def get_objective_function(problem: LpProblem) -> np.ndarray:
-        """
-        Extract the objective function coefficients from the problem.
-
-        :param problem: The linear programming problem containing the objective.
-        :type problem: LpProblem
-        :return: The objective coefficients vector aligned with problem variables.
-        :rtype: np.ndarray
-        """
-
-        assert problem.objective, "Problem must have an objective function"
-        return np.array([problem.objective.get(var, 0) for var in problem.variables()])
     
 
 class Basis(ConstraintSet):

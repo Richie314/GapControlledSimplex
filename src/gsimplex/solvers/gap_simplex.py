@@ -1,6 +1,8 @@
 from typing import Optional, Tuple, List, Union
-from pulp import LpProblem, LpConstraint
-from pulp.constants import LpMaximize, LpStatusOptimal
+from pulp import (
+    LpProblem, LpConstraint,
+    LpMaximize, LpStatusOptimal,
+)
 import math
 
 from gsimplex.solvers.primal_simplex import PrimalSimplex

@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Union, List
-from pulp import LpProblem, LpConstraint
-from pulp.constants import LpMaximize, LpMinimize
+from pulp import (
+    LpProblem, LpConstraint,
+    LpMaximize, LpMinimize,
+)
 import numpy as np
 
 from gsimplex.solvers.solver_interface import ISolver

@@ -1,10 +1,10 @@
 import numpy as np
-from typing import List, Tuple, Optional
-from pulp import LpProblem, LpConstraint
-from pulp.constants import LpConstraintEQ
+from typing import List, Tuple
+from pulp import LpProblem, LpConstraint, LpConstraintEQ
 
 from gsimplex.basis import Basis, ConstraintSet
 from gsimplex.constants import DEFAULT_ABS_TOLERANCE
+from gsimplex.tools.problem import constraint_to_row, get_objective_function
 
 class Vertex(Basis):
     """
@@ -240,8 +240,8 @@ class Vertex(Basis):
         A_Inv = -W
 
         # Compute the variation in the i-th row of A_B
-        new_vec = Vertex.constraint_to_row(new, problem)
-        old_vec = Vertex.constraint_to_row(old, problem)
+        new_vec, _ = constraint_to_row(new, problem)
+        old_vec, _ = constraint_to_row(old, problem)
 
         # Variation in the i-th row
         v = new_vec - old_vec
@@ -299,13 +299,13 @@ class Vertex(Basis):
         self.W = self.__build_W(self.problem, self.W, leaving_index, entering, leaving)
 
         # A_B x = b_B <==> x = -W b_B
-        b_B = np.array([Vertex.constraint_to_linear_term(constraint) for constraint in self])
+        b_B = np.array([constraint_to_row(c, self.problem)[1] for c in self])
         x = -self.W @ b_B
         self._set_primal_vars(x)
 
         # y_B^T A_B = c^T <==> y_B^T = -c^T * W
         assert self.problem.objective, "Problem must have an objective function"
-        c = Vertex.get_objective_function(self.problem)
+        c = get_objective_function(self.problem)
         y_B = -c.T @ self.W
         self._set_dual_vars(y_B)
 

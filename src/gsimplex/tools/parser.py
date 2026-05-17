@@ -1,10 +1,10 @@
-from pulp import LpProblem
-from pulp.constants import LpMaximize, LpMinimize
+from pulp import LpProblem, LpMaximize, LpMinimize
 import tempfile
 from pathlib import Path
 from typing import BinaryIO
 
 from gsimplex.tools.extractor import Extractor
+from gsimplex.tools.problem import add_variable_constraints
 
 class ProblemParser:
 
@@ -21,6 +21,7 @@ class ProblemParser:
         :rtype: LpProblem
         """
         _, problem = LpProblem.fromMPS(str(file_path), sense=sense)
+        add_variable_constraints(problem)
         return problem
 
     @staticmethod
