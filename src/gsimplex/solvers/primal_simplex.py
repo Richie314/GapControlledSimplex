@@ -3,6 +3,7 @@ from pulp import (
     LpProblem, LpConstraint, LpVariable,
     LpConstraintEQ, LpConstraintLE, LpConstraintGE,
     LpMinimize, LpMaximize, LpStatusOptimal,
+    lpSum,
 )
 import numpy as np
 
@@ -36,8 +37,8 @@ class PrimalSimplex(ISimplex):
 
         ratios: List[Tuple[LpConstraint, float]] = []
         for c in v.non_basis:
-            Ai, bi = constraint_to_row(c, v.problem)
-            slack = Vertex.slack(c)
+            Ai, bi, slack = constraint_to_row(c, v.problem)
+            assert slack is not None
 
             den = float(Ai @ d)
             if den > self.abs_tol:
@@ -195,8 +196,8 @@ class PrimalSimplex(ISimplex):
         aux_vars = [LpVariable(f"aux_{n + i + 1}") for i in range(k)]
 
         # Build the auxiliary problem
-        aux_problem = LpProblem(f"Auxiliary_for_{original.name}", LpMinimize)
-        aux_problem.setObjective(sum(aux_vars))
+        aux_problem = LpProblem(f"Auxiliary_for_{original.name}", sense=LpMinimize)
+        aux_problem.setObjective(lpSum(aux_vars))
 
         for constraint in initial_vertex.all_constraints:
             j = V.index(constraint) if constraint in V else None
@@ -330,15 +331,15 @@ class PrimalSimplex(ISimplex):
                 d = v.W[:, v.index(entering)]
             else:
                 # A_B @ d = Ap --> d = A_B^-1 @ Ap = -W @ Ap 
-                Ap, _ = constraint_to_row(entering, v.problem)
+                Ap, bp, slackp = constraint_to_row(entering, v.problem)
                 d = -v.W @ Ap
 
             leaving: Optional[LpConstraint] = None
             if self.pivot_rule == 'bland':
                 ratios: List[Tuple[LpConstraint, float]] = []
                 for c in v.non_basis:
-                    Ai, bi = constraint_to_row(c, v.problem)
-                    slack = Vertex.slack(c)
+                    Ai, bi, slack = constraint_to_row(c, v.problem)
+                    assert slack is not None
 
                     den = float(Ai @ d)
                     if den > self.abs_tol:
@@ -348,7 +349,7 @@ class PrimalSimplex(ISimplex):
                     leaving, _ = min(ratios, key=lambda x: x[1])
             else:
                 for constraint in v.non_basis:
-                    Ak, _ = constraint_to_row(constraint, v.problem)
+                    Ak, bk, slackk = constraint_to_row(constraint, v.problem)
                     pivot = d @ Ak
                     if pivot < -self.abs_tol:
                         leaving = constraint

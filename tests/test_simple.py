@@ -1,4 +1,5 @@
 import pytest
+from pulp import LpMinimize
 
 from .lptest import LinearProgrammingTest
 from gsimplex.solvers import (
@@ -47,11 +48,13 @@ test_data = [
     ),
     LinearProgrammingTest(
         filename="problems/8.mps",
+        sense=LpMinimize,
         expected_solution=[16/5, 13/5],
         basis=["_C2", "_C3"],
     ),
     LinearProgrammingTest(
         filename="problems/9.mps",
+        sense=LpMinimize,
         expected_solution=[90/7, 130/7],
         basis=["_C1", "_C4"],
     ),

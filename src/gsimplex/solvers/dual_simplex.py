@@ -87,7 +87,7 @@ class DualSimplex(ISimplex):
         :rtype: np.ndarray
         """
         
-        Ak, _ = constraint_to_row(constraint, v.problem)
+        Ak, bk, slack = constraint_to_row(constraint, v.problem)
         return Ak
 
     def _single_iteration(self, point: "Vertex") -> "Vertex":
@@ -213,8 +213,8 @@ class DualSimplex(ISimplex):
          
             ratios: List[Tuple[LpConstraint, float]] = []
             for c in v.non_basis:
-                Ai, bi = constraint_to_row(c, v.problem)
-                slack = Vertex.slack(c)
+                Ai, bi, slack = constraint_to_row(c, v.problem)
+                assert slack is not None
 
                 den = float(Ai @ d)
                 if den > self.abs_tol:

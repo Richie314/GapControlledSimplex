@@ -38,8 +38,8 @@ class LinearProgrammingTest:
         if self.expected_solution is not None:
             assert self.problem.numVariables() == len(self.expected_solution)
             if self.expected_value is None:
-                c = get_objective_function(self.problem)
-                self.expected_value = c @ self.expected_solution
+                obj = get_objective_function(self.problem)
+                self.expected_value = obj @ self.expected_solution
 
         for constraint in list(self.problem.constraints.values()):
             assert constraint.name
@@ -57,7 +57,8 @@ class LinearProgrammingTest:
         optimal_basis = Vertex.from_problem_state(self.problem)
         assert len(optimal_basis) == self.problem.numVariables()
         optimal_basis = Vertex(self.problem, *optimal_basis)
-        assert optimal_basis.is_optimal_point()
+        assert optimal_basis.is_primal_feasible(), f"Final point is not primal-feasible. {optimal_basis}"
+        assert optimal_basis.is_dual_feasible(), f"Final point is not dual-feasible. {optimal_basis}"
 
         if self.expected_value is not None:
             slack = abs(value - self.expected_value)

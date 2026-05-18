@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from gsimplex.solvers import (
-    ISolver,
+    ISimplex,
     PrimalSimplex,
     DualSimplex,
     GapDoubleSimplex,
@@ -37,7 +37,7 @@ def main():
     problem = ProblemParser.load_mps_from_file(args.problem)
     print(f"{problem=}")
 
-    solver: ISolver = solvers[args.solver]()
+    solver: ISimplex = solvers[args.solver]()
     print(f"{solver=}")
 
     return 0

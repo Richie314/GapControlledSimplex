@@ -136,9 +136,9 @@ class ISimplex(ISolver, ABC):
         """
         
         assert problem.sense == LpMinimize, "Tried to minimize a maximization problem!"
-        assert problem.objective
-
-        problem.setObjective(-problem.objective)
+        
+        if problem.objective is not None:
+            problem.objective = -problem.objective
         problem.sense = LpMaximize
 
         self.maximize(problem=problem, 
@@ -146,5 +146,6 @@ class ISimplex(ISolver, ABC):
                       **kwargs
                       )
         
-        problem.setObjective(-problem.objective)
+        if problem.objective is not None:
+            problem.objective = -problem.objective
         problem.sense = LpMinimize

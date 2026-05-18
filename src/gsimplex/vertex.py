@@ -1,6 +1,6 @@
 import numpy as np
 from typing import List, Tuple
-from pulp import LpProblem, LpConstraint, LpConstraintEQ
+from pulp import LpProblem, LpConstraint
 
 from gsimplex.basis import Basis, ConstraintSet
 from gsimplex.constants import DEFAULT_ABS_TOLERANCE
@@ -44,38 +44,17 @@ class Vertex(Basis):
 
         n = p.numVariables()
 
-        active_constraints = [c for c in p.constraints.values() if abs(Vertex.slack(c)) < 2*eps]
-        assert len(active_constraints) >= n, f"Too few active constraints to be on an edge point: {len(active_constraints)} < {n}."
+        slacks = [constraint_to_row(c, p)[2] for c in p.constraints.values()]
+        slacks = [s for s in slacks if s is not None]
+        assert len(slacks) == p.numConstraints()
+
+        active_constraints = [c for i, c in enumerate(p.constraints.values()) if abs(slacks[i]) < 2*eps]
+        total_active = len(active_constraints)
+        assert total_active >= n, f"Too few active constraints to be on an edge point: {total_active} < {n=}."
         
-        # TODO: handle the "len(active_constraints) > n" case
+        # TODO: handle the "total_active > n" case
         
         return ConstraintSet(*active_constraints)
-
-    @staticmethod
-    def slack(constraint: LpConstraint) -> float:
-        """
-        Compute the slack of a constraint, defined as b_i - A_i x.
-
-        :param constraint: The constraint for which to compute slack.
-        :type constraint: LpConstraint
-        :return: The slack value for the constraint.
-        :rtype: float
-        """
-
-        value = constraint.value()
-        assert value is not None, "Constraint value is None, cannot compute slack"
-
-        """
-        Retrieved value can mean different things depending on the type of constraint
-        * value =  Ai * x - bi <= 0 --> bi - Ai * x = -value
-        * value = -Ai * x + bi >= 0 --> bi - Ai * x =  value
-        * value =  Ai * x - bi == 0 --> bi - Ai * x = -value
-        """
-
-        if constraint.sense == LpConstraintEQ:
-            return -value
-
-        return constraint.sense * value
     
     @property
     def primal_value(self) -> float:
@@ -96,7 +75,8 @@ class Vertex(Basis):
         :return: An array of primal residual values truncated at zero.
         :rtype: np.ndarray
         """
-        s = [Vertex.slack(c) for c in self.all_constraints]
+        s = [constraint_to_row(c, self.problem)[2] for c in self.all_constraints]
+        s = [si for si in s if si is not None]
         return np.minimum(s, 0)
     
     def primal_infeasible_constraints(self, eps: float = DEFAULT_ABS_TOLERANCE) -> List[Tuple[LpConstraint, float]]:
@@ -240,8 +220,8 @@ class Vertex(Basis):
         A_Inv = -W
 
         # Compute the variation in the i-th row of A_B
-        new_vec, _ = constraint_to_row(new, problem)
-        old_vec, _ = constraint_to_row(old, problem)
+        new_vec, _, _ = constraint_to_row(new, problem)
+        old_vec, _, _ = constraint_to_row(old, problem)
 
         # Variation in the i-th row
         v = new_vec - old_vec
@@ -306,7 +286,7 @@ class Vertex(Basis):
         # y_B^T A_B = c^T <==> y_B^T = -c^T * W
         assert self.problem.objective, "Problem must have an objective function"
         c = get_objective_function(self.problem)
-        y_B = -c.T @ self.W
+        y_B = self.problem.sense * c.T @ self.W
         self._set_dual_vars(y_B)
 
         return self

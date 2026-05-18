@@ -1,13 +1,9 @@
-from pulp import (
-    LpProblem, LpConstraint, LpVariable,
-    LpConstraintEQ, LpConstraintLE, LpConstraintGE,
-)
+from pulp import LpProblem, LpConstraint, LpVariable
 from typing import List, Tuple, Optional, Union
 import numpy as np
 
 from gsimplex.tools.algebra import rows_are_same
 from gsimplex.tools.problem import constraint_to_row, get_objective_function
-from gsimplex.exception import UnFeasibleProblemException
 
 class ConstraintSet(List[LpConstraint]):
     """
@@ -67,7 +63,7 @@ class ConstraintSet(List[LpConstraint]):
         assert len(c) == n
 
         a_B, _ = self._compute_system(problem)
-        y_B = np.linalg.solve(a_B.T, c)
+        y_B = np.linalg.solve(a_B.T, c) * -problem.sense
 
         return y_B
     
