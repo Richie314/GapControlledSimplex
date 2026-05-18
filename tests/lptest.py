@@ -54,9 +54,14 @@ class LinearProgrammingTest:
         value = self.problem.objective.value()
         assert value is not None
 
+        optimal_basis = Vertex.from_problem_state(self.problem)
+        assert len(optimal_basis) == self.problem.numVariables()
+        optimal_basis = Vertex(self.problem, *optimal_basis)
+        assert optimal_basis.is_optimal_point()
+
         if self.expected_value is not None:
             slack = abs(value - self.expected_value)
-            assert slack < DEFAULT_ABS_TOLERANCE, f"Too big solution gap: {slack:.4} = |{value} - {self.expected_value}|"
+            assert slack < DEFAULT_ABS_TOLERANCE, f"Too big distance to known optimal value: {slack:.4} = |{value} - {self.expected_value}|. {optimal_basis}"
             
         if self.expected_solution is not None:
             for i in range(self.problem.numVariables()):
@@ -64,5 +69,5 @@ class LinearProgrammingTest:
 
                 assert x_Val is not None
                 slack = abs(x_Val - self.expected_solution[i])
-                assert slack <= 2*DEFAULT_ABS_TOLERANCE, f"Too big solution gap: {slack:.4} = |{x_Val} - {self.expected_solution[i]}|"
+                assert slack <= 2*DEFAULT_ABS_TOLERANCE, f"Too distance in optimal point: {slack:.4} = |{x_Val} - {self.expected_solution[i]}| {optimal_basis}"
 
