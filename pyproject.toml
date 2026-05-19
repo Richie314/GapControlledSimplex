@@ -34,7 +34,12 @@ Homepage = "https://github.com/Richie314/GapControlledSimplex"
 Issues = "https://github.com/Richie314/GapControlledSimplex/issues"
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = [
+    "pytest",
+    "pulp[cbc]",
+    "pulp[cplex]",
+    "pulp[gurobi]",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

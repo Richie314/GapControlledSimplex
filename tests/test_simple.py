@@ -26,11 +26,11 @@ test_data = [
         expected_solution=[650.0/29, 1300.0/29, 1800.0/29],
         basis=["_C2", "_C6", "_C7"],
     ),
-    #LinearProgrammingTest( # No solutions or many solutions!
-    #    filename="problems/4.mps",
-    #    expected_solution=[1000.0/3, 2000.0/3],
-    #    basis=["_C1", "_C5"],
-    #),
+    LinearProgrammingTest(
+        filename="problems/4.mps",
+        expected_value=1_500,
+        basis=["_C1", "_C5"],
+    ),
     LinearProgrammingTest(
         filename="problems/5.mps",
         expected_solution=[350.0/23, 1090.0/23],
@@ -49,7 +49,7 @@ test_data = [
     LinearProgrammingTest(
         filename="problems/8.mps",
         sense=LpMinimize,
-        expected_solution=[16/5, 13/5],
+        expected_value=11.0, # Problem has infinite solutions (two vertices)
         basis=["_C2", "_C3"],
     ),
     LinearProgrammingTest(
