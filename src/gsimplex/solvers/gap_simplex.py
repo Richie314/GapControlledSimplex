@@ -8,6 +8,7 @@ from gsimplex.solvers.primal_simplex import PrimalSimplex
 from gsimplex.solvers.dual_simplex import DualSimplex
 from gsimplex.vertex import Vertex
 from gsimplex.tools.problem import clone_problem
+from gsimplex.tools.gap import gap
 from gsimplex.exception import *
 from gsimplex.constants import *
 
@@ -169,8 +170,8 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
                     
                     return
                 
-                gap, rel_gap, primal_value, dual_value = Vertex.gap(dual_point, primal_point, self.abs_tol)
-                if gap < self.abs_gap or rel_gap < self.rel_gap:
+                _gap, rel_gap, primal_value, dual_value = gap(dual_point, primal_point, self.abs_tol)
+                if _gap < self.abs_gap or rel_gap < self.rel_gap:
                     # Optimality was not reached, but we are close enough
                     problem.status = LpStatusOptimal
                     return

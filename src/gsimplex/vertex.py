@@ -148,42 +148,6 @@ class Vertex(Basis):
         :rtype: bool
         """
         return self.is_primal_feasible(eps) and self.is_dual_feasible(eps)
-
-
-    @staticmethod
-    def gap(dual_vertex: "Vertex", 
-            primal_vertex: "Vertex",
-            eps: float = DEFAULT_ABS_TOLERANCE
-            ) -> Tuple[float, float, float, float]:
-        """
-        Compute the optimality gap between a dual and a primal vertex.
-
-        :param dual_vertex: The dual vertex for the problem.
-        :type dual_vertex: Vertex
-        :param primal_vertex: The primal vertex for the same problem.
-        :type primal_vertex: Vertex
-        :param eps: Tolerance used for feasibility assertions.
-        :type eps: float
-        :return: A tuple of (gap, relative gap, dual value, primal value).
-        :rtype: Tuple[float, float, float, float]
-        """
-        #if dual_vertex.problem is not primal_vertex.problem:
-        #    raise ValueError("Vertices from different problems")
-        assert dual_vertex.problem.numVariables() == primal_vertex.problem.numVariables()
-
-        assert primal_vertex.is_primal_feasible(eps), "Primal vertex is not feasible"
-        assert dual_vertex.is_dual_feasible(eps), "Dual vertex is not feasible"
-
-        dual_val = dual_vertex.dual_value
-        primal_val = primal_vertex.primal_value
-
-        gap = abs(dual_val - primal_val)
-        rel_gap = gap / (abs(primal_val) + 1)
-
-        return gap, rel_gap, dual_val, primal_val
-    
-    def __sub__(self, other: "Vertex") -> Tuple[float, float, float, float]:
-        return Vertex.gap(self, other)
     
     def __str__(self) -> str:
         s = super().__str__()
