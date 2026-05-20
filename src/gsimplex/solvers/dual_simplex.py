@@ -75,7 +75,7 @@ class DualSimplex(ISimplex):
 
         return entering
 
-    def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
+    def get_moving_direction(self, v: "Vertex", constraint: LpConstraint) -> np.ndarray:
         """
         Compute the dual simplex moving direction for a constraint.
 
@@ -110,7 +110,7 @@ class DualSimplex(ISimplex):
 
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
+                 start_basis: Optional[Union[List[LpConstraint], "Vertex", List[str]]] = None,
                  **kwargs):
         """
         Solve a maximization problem using the dual simplex method.
@@ -184,8 +184,8 @@ class DualSimplex(ISimplex):
 
     def phase_one_solve(self, 
                         p: LpProblem, 
-                        v: Union[List[LpConstraint], Vertex, List[str]],
-                        ) -> Tuple[Vertex, int]:
+                        v: Union[List[LpConstraint], "Vertex", List[str]],
+                        ) -> Tuple["Vertex", int]:
         """
         Perform Phase I iterations to obtain a dual-feasible starting vertex.
 
@@ -236,7 +236,7 @@ class DualSimplex(ISimplex):
 
     def get_starting_point(self, 
                            problem: LpProblem,
-                           ) -> Tuple[Optional[Vertex], int]:
+                           ) -> Tuple[Optional["Vertex"], int]:
         """
         Find a starting point for the dual simplex solver.
 

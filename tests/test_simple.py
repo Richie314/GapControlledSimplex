@@ -6,7 +6,7 @@ from gsimplex.solvers import (
     PrimalSimplex,
     DualSimplex,
     GapDoubleSimplex,
-    CrissCross,
+    MutualPrimalDualSimplex,
 )
 
 
@@ -141,16 +141,27 @@ def test_gap_simplex_bland(test_case):
 
 """
 =============================================================
-                     Criss Cross
+                 Mutual Primal-Dual Simplex
 =============================================================
 """
 
 @pytest.mark.parametrize("test_case", test_data)
-def test_criss_cross_dantzig(test_case):
-    solver = CrissCross(pivot_rule="dantzig")
+def test_mutual_primaldual_simplex_dantzig(test_case):
+    solver = MutualPrimalDualSimplex(pivot_rule="dantzig")
     test_case.test(solver)
 
 @pytest.mark.parametrize("test_case", test_data)
-def test_criss_cross_bland(test_case):
-    solver = CrissCross(pivot_rule="bland")
+def test_mutual_primaldual_simplex_bland(test_case):
+    solver = MutualPrimalDualSimplex(pivot_rule="bland")
     test_case.test(solver)
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_mutual_primaldual_simplex_phase_I_dantzig(test_case):
+    solver = MutualPrimalDualSimplex(pivot_rule="dantzig")
+    test_case.test(solver, use_start_basis=False)
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_mutual_primaldual_simplex_phase_I_bland(test_case):
+    solver = MutualPrimalDualSimplex(pivot_rule="bland")
+    test_case.test(solver, use_start_basis=False)
+

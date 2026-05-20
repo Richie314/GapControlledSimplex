@@ -7,7 +7,7 @@ from pulp import (
 from pathlib import Path
 
 from gsimplex.vertex import Vertex
-from gsimplex.solvers.simplex_interface import ISimplex
+from gsimplex.solvers.solver_interface import ISolver
 from gsimplex.tools import ProblemParser, get_objective_function
 from gsimplex.constants import DEFAULT_ABS_TOLERANCE
 
@@ -67,7 +67,7 @@ class LinearProgrammingTest:
                 assert slack <= 2*eps, f"Too distance in optimal point: {slack:.4} = |{x_Val} - {self.expected_solution[i]}| {optimal_basis}"
 
 
-    def test(self, solver: ISimplex, use_start_basis: bool = True):
+    def test(self, solver: ISolver, use_start_basis: bool = True):
         self.problem.solve(solver, 
                            start_basis=self.basis if use_start_basis else None, 
                            )

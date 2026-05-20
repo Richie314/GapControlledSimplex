@@ -40,7 +40,6 @@ This package provides three main solver implementations in `gsimplex.solvers`:
     - `abs_gap`: absolute gap threshold for early termination.
     - `rel_gap`: relative gap threshold for early termination.
     - `pivot_rule`: pivot selection strategy for both primal and dual steps.
-    - `update_frequency`: tuple (primal_freq, dual_freq) controlling iteration frequencies; it executes one primal simplex iteration per primal_freq "global" iterations. The same for dual_freq. If primal_freq > dual_freq, dual moves faster; if dual_freq > primal_freq, primal moves faster.
 
 ## Installation
 

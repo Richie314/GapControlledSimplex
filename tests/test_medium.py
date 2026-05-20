@@ -6,7 +6,6 @@ from gsimplex.solvers import (
     PrimalSimplex,
     DualSimplex,
     GapDoubleSimplex,
-    CrissCross,
 )
 
 

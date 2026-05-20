@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from pulp import LpProblem, LpConstraint
 
 from gsimplex.basis import Basis, ConstraintSet
@@ -151,8 +151,8 @@ class Vertex(Basis):
 
 
     @staticmethod
-    def gap(dual_vertex: 'Vertex', 
-            primal_vertex: 'Vertex',
+    def gap(dual_vertex: "Vertex", 
+            primal_vertex: "Vertex",
             eps: float = DEFAULT_ABS_TOLERANCE
             ) -> Tuple[float, float, float, float]:
         """
@@ -182,7 +182,7 @@ class Vertex(Basis):
 
         return gap, rel_gap, dual_val, primal_val
     
-    def __sub__(self, other: 'Vertex') -> Tuple[float, float, float, float]:
+    def __sub__(self, other: "Vertex") -> Tuple[float, float, float, float]:
         return Vertex.gap(self, other)
     
     def __str__(self) -> str:
@@ -247,7 +247,7 @@ class Vertex(Basis):
         return -A_new_inv
         
     
-    def swap(self, entering: LpConstraint, leaving: LpConstraint|str):
+    def swap(self, entering: LpConstraint, leaving: Union[LpConstraint, str]):
         """
         Replace one basic constraint with another and update the vertex.
 

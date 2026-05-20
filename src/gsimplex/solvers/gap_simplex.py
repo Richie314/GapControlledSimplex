@@ -3,7 +3,6 @@ from pulp import (
     LpProblem, LpConstraint,
     LpMaximize, LpStatusOptimal,
 )
-import math
 
 from gsimplex.solvers.primal_simplex import PrimalSimplex
 from gsimplex.solvers.dual_simplex import DualSimplex
@@ -20,7 +19,6 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
                  abs_gap: Optional[float] = None,
                  rel_gap: Optional[float] = None,
                  pivot_rule: PivotRule = DEFAULT_PIVOT_RULE,
-                 update_frequency: Tuple[int, int] = (1, 1),
                  ):
         """
         Initialize the gap-controlled double simplex solver.
@@ -37,8 +35,6 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
         :type rel_gap: Optional[float]
         :param pivot_rule: Pivot rule for simplex iterations.
         :type pivot_rule: PivotRule
-        :param update_frequency: Frequency of primal and dual updates as (primal_freq, dual_freq).
-        :type update_frequency: Tuple[int, int]
         """
         super().__init__(max_iterations, abs_eps, rel_eps, pivot_rule)
 
@@ -48,27 +44,11 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
         self.rel_gap = rel_gap if rel_gap else DEFAULT_REL_GAP
         assert self.rel_gap >= 0, f"Relative gap must be >= 0. {self.rel_gap:.5} given."
 
-        primal_update, dual_update = update_frequency
-        assert primal_update >= 0 and dual_update >= 0, "Update rates must be non-negative"
-
-        gcd = math.gcd(primal_update, dual_update)
-        primal_update /= gcd
-        dual_update /= gcd
-
-        """
-        If primal_update > dual_update, the dual point will "move faster",
-            as it will do more dual iterations than primal ones.
-        If dual_update > primal_update, the prial point will "move faster",
-            as it will do more primal iterations than dual ones.
-        """
-
-        self.update_frequency = (primal_update, dual_update)
-
 
     def __primal_init(self, 
                       problem: LpProblem, 
                       given: Optional[Union[List[LpConstraint], Vertex, List[str]]],
-                      ) -> Tuple[Vertex, int]:
+                      ) -> Tuple["Vertex", int]:
         """
         Initialize a primal-feasible starting point.
 
@@ -105,7 +85,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
     def __dual_init(self, 
                       problem: LpProblem, 
                       given: Optional[Union[List[LpConstraint], Vertex, List[str]]],
-                      ) -> Tuple[Vertex, int]:
+                      ) -> Tuple["Vertex", int]:
         """
         Initialize a dual-feasible starting point.
 
@@ -195,10 +175,8 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
                     problem.status = LpStatusOptimal
                     return
 
-                if it % self.update_frequency[0] == 0:
-                    PrimalSimplex._single_iteration(self, primal_point)
-                if it % self.update_frequency[1] == 0:
-                    DualSimplex._single_iteration(self, dual_point)
+                PrimalSimplex._single_iteration(self, primal_point)
+                DualSimplex._single_iteration(self, dual_point)
 
             raise IterationLimitReachedException(
                 f"Max iterations ({self.max_iterations}) reached"
@@ -206,5 +184,4 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
 
 
         except GsimplexException as e:
-            # print(e)
             problem.status = e.status

@@ -30,20 +30,17 @@ class ISimplex(ISolver, ABC):
         :type pivot_rule: PivotRule
         """
 
-        self.max_iterations = max_iterations if max_iterations else DEFAULT_MAX_ITERATIONS
-        assert self.max_iterations > 0, f"Maximum number of iterations must be positive. {self.max_iterations} given."
-
-        self.abs_tol = abs_eps if abs_eps else DEFAULT_ABS_TOLERANCE
-        assert self.abs_tol >= 0, f"Absolute ε must be >= 0. {self.abs_tol:.5} given."
-
-        self.rel_tol = rel_eps if rel_eps else DEFAULT_REL_TOLERANCE
-        assert self.rel_tol >= 0, f"Relative ε must be >= 0. {self.abs_tol:.5} given."
+        super().__init__(
+            max_iterations=max_iterations,
+            abs_eps=abs_eps,
+            rel_eps=rel_eps,
+        )
 
         self.pivot_rule = pivot_rule
     
     @abstractmethod
     def get_entering_constraint(self, 
-                                v: Vertex, 
+                                v: "Vertex", 
                                 d: Optional[Union[np.ndarray, List[float]]] = None,
                                 ) -> Optional[LpConstraint]:
         """
@@ -60,7 +57,7 @@ class ISimplex(ISolver, ABC):
     
     @abstractmethod
     def get_leaving_constraint(self, 
-                               v: Vertex, 
+                               v: "Vertex", 
                                d: Optional[Union[np.ndarray, List[float]]] = None,
                                ) -> Optional[LpConstraint]:
         """
@@ -76,7 +73,7 @@ class ISimplex(ISolver, ABC):
         pass
 
     @abstractmethod
-    def get_moving_direction(self, v: Vertex, constraint: LpConstraint) -> np.ndarray:
+    def get_moving_direction(self, v: "Vertex", constraint: LpConstraint) -> np.ndarray:
         """
         Compute the moving direction vector for the given constraint.
 
@@ -92,7 +89,7 @@ class ISimplex(ISolver, ABC):
     @abstractmethod
     def get_starting_point(self, 
                            problem: LpProblem, 
-                           ) -> Tuple[Optional[Vertex], int]:
+                           ) -> Tuple[Optional["Vertex"], int]:
         """
         Find a starting point (vertex) for the simplex algorithm.
 
@@ -106,7 +103,7 @@ class ISimplex(ISolver, ABC):
     @abstractmethod
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
+                 start_basis: Optional[Union[List[LpConstraint], "Vertex", List[str]]] = None,
                  **kwargs):
         """
         Solve the maximization problem using the simplex method.
@@ -122,7 +119,7 @@ class ISimplex(ISolver, ABC):
 
     def minimize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
+                 start_basis: Optional[Union[List[LpConstraint], "Vertex", List[str]]] = None,
                  **kwargs):
         """
         Solve a minimization problem by converting it to a maximization problem.
@@ -141,11 +138,12 @@ class ISimplex(ISolver, ABC):
             problem.objective = -problem.objective
         problem.sense = LpMaximize
 
-        self.maximize(problem=problem, 
-                      start_basis=start_basis,
-                      **kwargs
-                      )
-        
-        if problem.objective is not None:
-            problem.objective = -problem.objective
-        problem.sense = LpMinimize
+        try:
+            self.maximize(problem=problem, 
+                        start_basis=start_basis,
+                        **kwargs
+                        )
+        finally:
+            if problem.objective is not None:
+                problem.objective = -problem.objective
+            problem.sense = LpMinimize

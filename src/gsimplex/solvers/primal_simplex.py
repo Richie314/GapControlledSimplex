@@ -170,7 +170,7 @@ class PrimalSimplex(ISimplex):
             # print(e)
             problem.status = e.status
 
-    def get_auxiliary_problem(self, original: LpProblem) -> Tuple[LpProblem, Vertex]:
+    def get_auxiliary_problem(self, original: LpProblem) -> Tuple[LpProblem, "Vertex"]:
         """
         Construct an auxiliary LP problem and initial vertex for Phase I.
 
@@ -247,7 +247,7 @@ class PrimalSimplex(ISimplex):
 
         return aux_problem, aux_vertex
 
-    def get_feasible_vertex(self, problem: LpProblem) -> Tuple[Vertex, int]:
+    def get_feasible_vertex(self, problem: LpProblem) -> Tuple["Vertex", int]:
         """
         Compute a primal feasible basis vertex for the given problem.
 
