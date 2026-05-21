@@ -20,7 +20,7 @@ class PrimalSimplex(ISimplex):
 
     def get_entering_constraint(self, 
                                 v: Vertex, 
-                                d: Optional[Union[np.ndarray, List[float]]] = None,
+                                d: Union[np.ndarray, List[float], None] = None,
                                 ) -> Optional[LpConstraint]:
         """
         Select the entering constraint by Dantzig's rule.
@@ -28,7 +28,7 @@ class PrimalSimplex(ISimplex):
         :param v: Current vertex representing the basis.
         :type v: Vertex
         :param d: Current moving direction vector, required.
-        :type d: Optional[Union[np.ndarray, List[float]]]
+        :type d: Union[np.ndarray, List[float], None]
         :return: The chosen entering constraint or None when no valid entering constraint exists.
         :rtype: Optional[LpConstraint]
         """
@@ -52,7 +52,7 @@ class PrimalSimplex(ISimplex):
 
     def get_leaving_constraint(self, 
                                v: Vertex, 
-                               d: Optional[Union[np.ndarray, List[float]]] = None,
+                               d: Union[np.ndarray, List[float], None] = None,
                                ) -> Optional[LpConstraint]:
         """
         Select the leaving constraint using the Dantzig's maximum dual-infeasibility rule
@@ -61,7 +61,7 @@ class PrimalSimplex(ISimplex):
         :param v: Current vertex representing the basis.
         :type v: Vertex
         :param d: Current moving direction vector (not used directly here).
-        :type d: Optional[Union[np.ndarray, List[float]]]
+        :type d: Union[np.ndarray, List[float], None]
         :return: The chosen leaving constraint or None when no dual infeasibility exists.
         :rtype: Optional[LpConstraint]
         """
@@ -112,7 +112,7 @@ class PrimalSimplex(ISimplex):
 
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
+                 start_basis: Union["Vertex", List[LpConstraint], List[str], None] = None,
                  **kwargs
                  ):
         """
@@ -121,7 +121,7 @@ class PrimalSimplex(ISimplex):
         :param problem: The LP problem to solve.
         :type problem: LpProblem
         :param start_basis: Optional starting basis or vertex.
-        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :type start_basis: Union[Vertex, List[LpConstraint], List[str], None]
         :param kwargs: Additional solver options.
         :type kwargs: dict
         """
@@ -311,53 +311,3 @@ class PrimalSimplex(ISimplex):
             # print(e)
             return None, 0
         
-    def _nearest_primal_vertex(self, v: "Vertex") -> bool:
-        while True:
-
-            unfeasible_contraints = v.primal_infeasible_constraints(eps=self.abs_tol)
-            if len(unfeasible_contraints) == 0:
-                return True # Point is primal feasible
-            
-            # Same as entering constraint in Dual Simplex
-            if self.pivot_rule == "bland":
-                # First infeasible constraint
-                entering, _ = unfeasible_contraints[0] 
-            else:
-                # Least infeasible contraint
-                entering, _ = max(unfeasible_contraints, key=lambda x: x[1])
-
-                
-            if self.pivot_rule == "bland":
-                d = v.W[:, v.index(entering)]
-            else:
-                # A_B @ d = Ap --> d = A_B^-1 @ Ap = -W @ Ap 
-                Ap, bp, slackp = constraint_to_row(entering, v.problem)
-                d = -v.W @ Ap
-
-            leaving: Optional[LpConstraint] = None
-            if self.pivot_rule == 'bland':
-                ratios: List[Tuple[LpConstraint, float]] = []
-                for c in v.non_basis:
-                    Ai, bi, slack = constraint_to_row(c, v.problem)
-                    assert slack is not None
-
-                    den = float(Ai @ d)
-                    if den > self.abs_tol:
-                        ratios.append((c, slack / den))
-
-                if len(ratios) > 0:
-                    leaving, _ = min(ratios, key=lambda x: x[1])
-            else:
-                for constraint in v.non_basis:
-                    Ak, bk, slackk = constraint_to_row(constraint, v.problem)
-                    pivot = d @ Ak
-                    if pivot < -self.abs_tol:
-                        leaving = constraint
-                        break
-
-            if leaving is None:
-                raise UnboundedProblemException(
-                    "Phase I dual-problem is unbounded",
-                )
-                
-            v.swap(entering, leaving)

@@ -18,7 +18,7 @@ class DualSimplex(ISimplex):
     
     def get_leaving_constraint(self, 
                                v: Vertex, 
-                               d: Optional[Union[np.ndarray, List[float]]] = None,
+                               d:Union[np.ndarray, List[float], None] = None,
                                ) -> Optional[LpConstraint]:
         """
         Select the leaving constraint by minimizing the dual ratio.
@@ -26,7 +26,7 @@ class DualSimplex(ISimplex):
         :param v: Current vertex representing the basis.
         :type v: Vertex
         :param d: Current moving direction vector used to compute ratios, required.
-        :type d: Optional[Union[np.ndarray, List[float]]]
+        :type d: Union[np.ndarray, List[float], None]
         :return: The chosen leaving constraint or None when no valid candidate exists.
         :rtype: Optional[LpConstraint]
         """
@@ -50,7 +50,7 @@ class DualSimplex(ISimplex):
     
     def get_entering_constraint(self, 
                                 v: Vertex, 
-                                d: Optional[Union[np.ndarray, List[float]]] = None,
+                                d: Union[np.ndarray, List[float], None] = None,
                                 ) -> Optional[LpConstraint]:
         """
         Select the entering constraint using Bland's primal violation order
@@ -59,7 +59,7 @@ class DualSimplex(ISimplex):
         :param v: Current vertex representing the basis.
         :type v: Vertex
         :param d: Current moving direction vector (not used in this rule).
-        :type d: Optional[Union[np.ndarray, List[float]]]
+        :type d: Union[np.ndarray, List[float], None]
         :return: The chosen entering constraint or None when none are violated.
         :rtype: Optional[LpConstraint]
         """
@@ -110,7 +110,7 @@ class DualSimplex(ISimplex):
 
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], "Vertex", List[str]]] = None,
+                 start_basis: Union["Vertex", List[LpConstraint], List[str], None] = None,
                  **kwargs):
         """
         Solve a maximization problem using the dual simplex method.
@@ -118,7 +118,7 @@ class DualSimplex(ISimplex):
         :param problem: The LP problem to solve.
         :type problem: LpProblem
         :param start_basis: Optional starting basis or vertex.
-        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :type start_basis: Union[Vertex, List[LpConstraint], List[str], None]
         :param kwargs: Additional solver options.
         :type kwargs: dict
         """
@@ -184,7 +184,7 @@ class DualSimplex(ISimplex):
 
     def phase_one_solve(self, 
                         p: LpProblem, 
-                        v: Union[List[LpConstraint], "Vertex", List[str]],
+                        v: Union["Vertex", List[LpConstraint], List[str]],
                         ) -> Tuple["Vertex", int]:
         """
         Perform Phase I iterations to obtain a dual-feasible starting vertex.

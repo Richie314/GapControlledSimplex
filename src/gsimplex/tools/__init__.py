@@ -9,4 +9,4 @@ from gsimplex.tools.problem import (
     constraint_sense,
     constraint_to_row,
 )
-from gsimplex.tools.gap import gap
+# from gsimplex.tools.gap import vertex_gap

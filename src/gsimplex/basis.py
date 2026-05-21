@@ -2,7 +2,6 @@ from pulp import LpProblem, LpConstraint, LpVariable
 from typing import List, Tuple, Optional, Union
 import numpy as np
 
-from gsimplex.tools.algebra import rows_are_same
 from gsimplex.tools.problem import constraint_to_row, get_objective_function
 
 class ConstraintSet(List[LpConstraint]):

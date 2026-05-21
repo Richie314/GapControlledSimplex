@@ -41,7 +41,7 @@ class ISimplex(ISolver, ABC):
     @abstractmethod
     def get_entering_constraint(self, 
                                 v: "Vertex", 
-                                d: Optional[Union[np.ndarray, List[float]]] = None,
+                                d: Union[np.ndarray, List[float], None] = None,
                                 ) -> Optional[LpConstraint]:
         """
         Select the entering constraint for the simplex iteration.
@@ -58,7 +58,7 @@ class ISimplex(ISolver, ABC):
     @abstractmethod
     def get_leaving_constraint(self, 
                                v: "Vertex", 
-                               d: Optional[Union[np.ndarray, List[float]]] = None,
+                               d: Union[np.ndarray, List[float], None] = None,
                                ) -> Optional[LpConstraint]:
         """
         Select the leaving constraint for the simplex iteration.
@@ -103,7 +103,7 @@ class ISimplex(ISolver, ABC):
     @abstractmethod
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], "Vertex", List[str]]] = None,
+                 start_basis: Union["Vertex", List[LpConstraint], List[str], None] = None,
                  **kwargs):
         """
         Solve the maximization problem using the simplex method.
@@ -111,7 +111,7 @@ class ISimplex(ISolver, ABC):
         :param problem: The LP problem to solve.
         :type problem: LpProblem
         :param start_basis: Optional starting basis.
-        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :type start_basis: Union[Vertex, List[LpConstraint], List[str], None]
         :param kwargs: Additional solver options.
         :type kwargs: dict
         """
@@ -119,7 +119,7 @@ class ISimplex(ISolver, ABC):
 
     def minimize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], "Vertex", List[str]]] = None,
+                 start_basis: Union["Vertex", List[LpConstraint], List[str], None] = None,
                  **kwargs):
         """
         Solve a minimization problem by converting it to a maximization problem.
@@ -127,7 +127,7 @@ class ISimplex(ISolver, ABC):
         :param problem: The LP problem to solve.
         :type problem: LpProblem
         :param start_basis: Optional starting basis or vertex.
-        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :type start_basis: Union[Vertex, List[LpConstraint], List[str], None]
         :param kwargs: Additional solver options.
         :type kwargs: dict
         """

@@ -8,3 +8,4 @@ from gsimplex.solvers.gap_simplex import GapDoubleSimplex
 
 # Primal-Dual
 from gsimplex.solvers.mutual_primaldual_simplex import MutualPrimalDualSimplex
+from gsimplex.solvers.mutual_primaldual_simplex import MutualGapSimplex

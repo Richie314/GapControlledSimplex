@@ -7,6 +7,7 @@ from gsimplex.solvers import (
     DualSimplex,
     GapDoubleSimplex,
     MutualPrimalDualSimplex,
+    MutualGapSimplex,
 )
 
 
@@ -163,5 +164,27 @@ def test_mutual_primaldual_simplex_phase_I_dantzig(test_case):
 @pytest.mark.parametrize("test_case", test_data)
 def test_mutual_primaldual_simplex_phase_I_bland(test_case):
     solver = MutualPrimalDualSimplex(pivot_rule="bland")
+    test_case.test(solver, use_start_basis=False)
+
+
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_mutual_gap_simplex_dantzig(test_case):
+    solver = MutualGapSimplex(pivot_rule="dantzig")
+    test_case.test(solver)
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_mutual_gap_simplex_bland(test_case):
+    solver = MutualGapSimplex(pivot_rule="bland")
+    test_case.test(solver)
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_mutual_gap_simplex_phase_I_dantzig(test_case):
+    solver = MutualGapSimplex(pivot_rule="dantzig")
+    test_case.test(solver, use_start_basis=False)
+
+@pytest.mark.parametrize("test_case", test_data)
+def test_mutual_gap_simplex_phase_I_bland(test_case):
+    solver = MutualGapSimplex(pivot_rule="bland")
     test_case.test(solver, use_start_basis=False)
 

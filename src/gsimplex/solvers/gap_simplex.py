@@ -8,7 +8,7 @@ from gsimplex.solvers.primal_simplex import PrimalSimplex
 from gsimplex.solvers.dual_simplex import DualSimplex
 from gsimplex.vertex import Vertex
 from gsimplex.tools.problem import clone_problem
-from gsimplex.tools.gap import gap
+from gsimplex.tools.gap import vertex_gap
 from gsimplex.exception import *
 from gsimplex.constants import *
 
@@ -48,7 +48,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
 
     def __primal_init(self, 
                       problem: LpProblem, 
-                      given: Optional[Union[List[LpConstraint], Vertex, List[str]]],
+                      given: Union["Vertex", List[LpConstraint], List[str], None],
                       ) -> Tuple["Vertex", int]:
         """
         Initialize a primal-feasible starting point.
@@ -56,7 +56,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
         :param problem: The LP problem.
         :type problem: LpProblem
         :param given: Optional starting basis.
-        :type given: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :type given: Union[Vertex, List[LpConstraint], List[str], None]
         :return: A primal-feasible vertex and iteration count.
         :rtype: Tuple[Vertex, int]
         :raises UnFeasibleProblemException: If no primal-feasible point is found.
@@ -85,7 +85,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
     
     def __dual_init(self, 
                       problem: LpProblem, 
-                      given: Optional[Union[List[LpConstraint], Vertex, List[str]]],
+                      given: Union["Vertex", List[LpConstraint], List[str], None],
                       ) -> Tuple["Vertex", int]:
         """
         Initialize a dual-feasible starting point.
@@ -93,7 +93,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
         :param problem: The LP problem.
         :type problem: LpProblem
         :param given: Optional starting basis.
-        :type given: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :type given: Union[Vertex, List[LpConstraint], List[str], None]
         :return: A dual-feasible vertex and iteration count.
         :rtype: Tuple[Vertex, int]
         :raises UnFeasibleProblemException: If no dual-feasible point is found.
@@ -122,7 +122,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
 
     def maximize(self, 
                  problem: LpProblem, 
-                 start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]] = None,
+                 start_basis: Union["Vertex", List[LpConstraint], List[str], None] = None,
                  **kwargs
                  ):
         """
@@ -131,7 +131,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
         :param problem: The LP problem to solve.
         :type problem: LpProblem
         :param start_basis: Optional starting basis for the primal point.
-        :type start_basis: Optional[Union[List[LpConstraint], Vertex, List[str]]]
+        :type start_basis: Union[Vertex, List[LpConstraint], List[str], None]
         :param kwargs: Additional solver options.
         :type kwargs: dict
         """
@@ -170,7 +170,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
                     
                     return
                 
-                _gap, rel_gap, primal_value, dual_value = gap(dual_point, primal_point, self.abs_tol)
+                _gap, rel_gap, _, _ = vertex_gap(dual_point, primal_point, eps=self.abs_tol)
                 if _gap < self.abs_gap or rel_gap < self.rel_gap:
                     # Optimality was not reached, but we are close enough
                     problem.status = LpStatusOptimal
