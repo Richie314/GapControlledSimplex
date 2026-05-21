@@ -178,25 +178,17 @@ class Vertex(Basis):
         :return: The updated inverse basis matrix.
         :rtype: np.ndarray
         """
-        
-
-        n = W.shape[0]
-        A_Inv = -W
 
         # Compute the variation in the i-th row of A_B
         new_vec, _, _ = constraint_to_row(new, problem)
         old_vec, _, _ = constraint_to_row(old, problem)
 
-        # Variation in the i-th row
+        # Variation in the i-th row of A_B
         v = new_vec - old_vec
-
-        # u = e_i
-        u = np.zeros(n)
-        u[i] = 1.0
+        Wi = W[:, i]
 
         # Compute denominator
-        Au = A_Inv @ u
-        denom = 1.0 + v @ Au
+        denom = 1.0 - v @ Wi
 
         if np.isclose(denom, 0.0, atol=DEFAULT_ABS_TOLERANCE):
             raise np.linalg.LinAlgError(
@@ -204,11 +196,9 @@ class Vertex(Basis):
             )
 
         # Build rank-1 correction matrix
-        outer = np.outer(Au, v @ A_Inv)
+        outer = np.outer(Wi, v @ W)
 
-        A_new_inv = A_Inv - outer / denom
-
-        return -A_new_inv
+        return W + outer / denom
         
     
     def swap(self, entering: LpConstraint, leaving: Union[LpConstraint, str]):
