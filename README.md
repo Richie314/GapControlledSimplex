@@ -90,7 +90,7 @@ print("Solution:", [var.varValue for var in problem.variables()]) # [1.0, 1.0]
 ## Download benchmark problems
 
 This package installs a command-line helper called `gsimplex-download-benchmarks`.
-It can download Plato, Netlib and [MipLib](https://miplib.zib.de/index.html) benchmark sets into a local directory, so you can test the solver on real LP problems.
+It can download [Plato](https://plato.asu.edu/ftp/lptestset/), [Netlib](https://www.netlib.org/lp/data/) and [MipLib](https://miplib.zib.de/index.html) benchmark sets into a local directory, so you can test the solver on real LP problems.
 
 By default, benchmark files are saved under the `benchmark/` directory in the current working directory.
 Plato files are stored in `benchmark/plato/`, Netlib files are stored in `benchmark/netlib/` and MipLib files are stored in `benchmark/miplib/`.
