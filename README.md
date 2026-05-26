@@ -20,7 +20,7 @@ This package provides three main solver implementations in `gsimplex.solvers`:
     - `max_iterations`: maximum number of simplex iterations (default configured by package).
     - `abs_eps`: absolute tolerance used for feasibility and optimality checks.
     - `rel_eps`: relative tolerance for numerical comparisons.
-    - `pivot_rule`: pivot selection strategy, typically `"dantzig"` by default; use `"bland"` to avoid cycling.
+    - `pivot_rule`: pivot selection strategy, `"dantzig"` by default; `"bland"` to avoid cycling.
 
 - [`DualSimplex`](./src/gsimplex/solvers/dual_simplex.py)
   - Dual simplex algorithm for problems with a dual-feasible starting basis.
@@ -28,7 +28,7 @@ This package provides three main solver implementations in `gsimplex.solvers`:
     - `max_iterations`: maximum number of simplex iterations.
     - `abs_eps`: absolute tolerance for primal/dual feasibility checking.
     - `rel_eps`: relative tolerance for numerical comparisons.
-    - `pivot_rule`: pivot selection strategy, with `"bland"` available for Bland's rule.
+    - `pivot_rule`: pivot selection strategy, `"dantzig"` by default; `"bland"` to avoid cycling.
 
 - [`GapDoubleSimplex`](./src/gsimplex/solvers/gap_simplex.py)
   - Combined primal/dual gap-controlled solver.
@@ -40,6 +40,25 @@ This package provides three main solver implementations in `gsimplex.solvers`:
     - `abs_gap`: absolute gap threshold for early termination.
     - `rel_gap`: relative gap threshold for early termination.
     - `pivot_rule`: pivot selection strategy for both primal and dual steps.
+
+- [`MutualPrimalDualSimplex`](./src/gsimplex/solvers/mutual_primal_dual_simplex.py)
+  - Mutual Primal-Dual Simplex algorithm proposed by Balinsky and Gomory in 1963.
+  - Parameters:
+    - `max_iterations`: maximum number of simplex iterations (default configured by package).
+    - `abs_eps`: absolute tolerance used for feasibility and optimality checks.
+    - `rel_eps`: relative tolerance for numerical comparisons.
+    - `pivot_rule`: pivot selection strategy, `"dantzig"` by default; `"bland"` to avoid cycling.
+
+- [`MutualPrimalDualSimplex`](./src/gsimplex/solvers/mutual_primal_dual_simplex.py)
+  - Variation of the previous algorithm with gap checks.
+  - Parameters:
+    - `max_iterations`: maximum number of simplex iterations (default configured by package).
+    - `abs_eps`: absolute tolerance used for feasibility and optimality checks.
+    - `rel_eps`: relative tolerance for numerical comparisons.
+    - `pivot_rule`: pivot selection strategy, `"dantzig"` by default; `"bland"` to avoid cycling.
+  - Additional parameters to `solve()`:
+    - `lb`: known lower bound to the objective function.
+    - `ub`: known upper bound to the objective function.
 
 ## Installation
 
@@ -87,9 +106,21 @@ print("Optimal value:", problem.objective.value()) # 2.0
 print("Solution:", [var.varValue for var in problem.variables()]) # [1.0, 1.0]
 ```
 
+## Generate a random LP problem
+
+This package installs a command-line helper called `gsimplex-generate-lp` to create a feasible LP in MPS format.
+
+```bash
+gsimplex-generate-lp --variables 10 --constraints 20 --output example.mps
+```
+
+- `--variables`, `-n`: number of decision variables
+- `--constraints`, `-m`: number of constraints
+- `--output`, `-o`: output MPS file path (default: `generated_lp.mps`)
+
 ## Download benchmark problems
 
-This package installs a command-line helper called `gsimplex-download-benchmarks`.
+The package also contains a tool to download known hard academic problems from the web: `gsimplex-download-benchmarks`.
 It can download [Plato](https://plato.asu.edu/ftp/lptestset/), [Netlib](https://www.netlib.org/lp/data/) and [MipLib](https://miplib.zib.de/index.html) benchmark sets into a local directory, so you can test the solver on real LP problems.
 
 By default, benchmark files are saved under the `benchmark/` directory in the current working directory.

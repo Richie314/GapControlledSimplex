@@ -78,7 +78,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
     
         if not given.is_primal_feasible(self.abs_tol):
             raise UnFeasibleProblemException(
-                f"#{it} Starting point isn't primal-feasible",
+                f"Starting point isn't primal-feasible",
             )
 
         return given, it
@@ -115,7 +115,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
     
         if not given.is_dual_feasible(eps=self.abs_tol):
             raise UnFeasibleProblemException(
-                f"#{it} Starting point isn't dual-feasible",
+                f"Starting point isn't dual-feasible",
             )
 
         return given, it
@@ -146,7 +146,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
             for it in range(max(primal_it, dual_it), self.max_iterations):
                 if not primal_point.is_primal_feasible(eps=self.abs_tol):
                     raise InvalidBasisException(
-                        f"#{it} Primal point has lost primal-feasibility.",
+                        f"Primal point has lost primal-feasibility.",
                     )
                 
                 if primal_point.is_dual_feasible(eps=self.abs_tol):
@@ -156,7 +156,7 @@ class GapDoubleSimplex(PrimalSimplex, DualSimplex):
                 
                 if not dual_point.is_dual_feasible(eps=self.abs_tol):
                     raise InvalidBasisException(
-                        f"#{it} Dual point has lost dual-feasibility",
+                        f"Dual point has lost dual-feasibility",
                     )
                 
                 if dual_point.is_primal_feasible(eps=self.abs_tol):

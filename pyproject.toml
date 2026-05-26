@@ -28,6 +28,7 @@ dependencies = [
 gsimplex = "gsimplex.__main__:main"
 gsimplex-emps = "gsimplex.benchmarks.netlib_emps:__main"
 gsimplex-download-benchmarks = "gsimplex.benchmarks.__main__:main"
+gsimplex-generate-lp = "gsimplex.tools.generator:__main"
 
 [project.urls]
 Homepage = "https://github.com/Richie314/GapControlledSimplex"

@@ -195,6 +195,8 @@ class DualSimplex(ISimplex):
         :rtype: Tuple[Vertex, int]
         """
 
+        assert v is not None, "Phase I requires an initial vertex. None given"
+
         if not isinstance(v, Vertex):
             v = Vertex(p, *[p.constraints[n] if isinstance(n, str) else n for n in v])
 

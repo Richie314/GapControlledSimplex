@@ -125,21 +125,27 @@ def clone_problem(lp: LpProblem) -> LpProblem:
         Ai, bi, slack = constraint_to_row(c, lp)
 
         if c.sense == LpConstraintEQ:
-            lp2 += Ai @ vars == bi
-        #elif c.sense == LpConstraintGE:
-        #    lp2 += -Ai @ vars >= -bi
+            lp2 += lpDot(Ai, vars) == bi, c.name
+        elif c.sense == LpConstraintGE:
+            lp2 += lpDot(-Ai, vars) >= -bi, c.name
         else:
-            lp2 += Ai @ vars <= bi
+            lp2 += lpDot(Ai, vars) <= bi, c.name
 
     return lp2
 
-def get_different_constraints(problem: LpProblem) -> List[LpConstraint]:
+def get_different_constraints(problem: LpProblem, shuffle_constraints: bool = False) -> List[LpConstraint]:
 
     n = problem.numVariables()
     m = problem.numConstraints()
     assert m >= n, f"Problem has more variables ({n=}) than constraints ({m=})."
 
     constraints = list(problem.constraints.values())
+    
+    if shuffle_constraints:
+        idx = np.arange(len(constraints))
+        np.random.shuffle(idx)
+        constraints = [constraints[i] for i in idx]
+
     if n == m:
         return constraints
 
