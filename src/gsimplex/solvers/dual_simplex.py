@@ -58,8 +58,8 @@ class DualSimplex(ISimplex):
 
         :param v: Current vertex representing the basis.
         :type v: Vertex
-        :param d: Current moving direction vector (not used in this rule).
-        :type d: Union[np.ndarray, List[float], None]
+        :param d: Not used. Ignore.
+        :type d: None
         :return: The chosen entering constraint or None when none are violated.
         :rtype: Optional[LpConstraint]
         """

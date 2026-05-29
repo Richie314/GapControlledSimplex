@@ -60,8 +60,8 @@ class PrimalSimplex(ISimplex):
 
         :param v: Current vertex representing the basis.
         :type v: Vertex
-        :param d: Current moving direction vector (not used directly here).
-        :type d: Union[np.ndarray, List[float], None]
+        :param d: Not used. Ignore.
+        :type d: None
         :return: The chosen leaving constraint or None when no dual infeasibility exists.
         :rtype: Optional[LpConstraint]
         """

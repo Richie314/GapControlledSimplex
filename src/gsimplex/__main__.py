@@ -25,10 +25,8 @@ def main():
     }
 
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--quiet', action='store_true', 
-                        help='Run in quiet mode')
-    parser.add_argument('--problem', type=str, required=True, 
-                        help='Name of the problem to solve or path to it')
+    parser.add_argument('--quiet', action='store_true', help='Run in quiet mode')
+    parser.add_argument('--problem', type=str, required=True, help='Path to the problem to solve')
     parser.add_argument('--solver', default='gsimplex', type=str, choices=solvers.keys(), 
                         help='Algorithm to use to solve the problem')
     args = parser.parse_args()
