@@ -38,7 +38,7 @@ class LPProblemGenerator:
 
         # Bounds to variables
         if upper_bound is None:
-            upper_bound = 20.0 * (lower_bound + 1.0)
+            upper_bound = 10.0 * (lower_bound + 1.0)
         assert upper_bound > lower_bound, "upper_bound must be greater than lower_bound"
         
         self.lb = lower_bound
@@ -53,7 +53,7 @@ class LPProblemGenerator:
         theta = np.random.rand() * alpha/2
         rho = theta / 10.0
 
-        objective_coeffs = theta * self.rng.uniform(1.0, 20.0, size=self.n)
+        objective_coeffs = theta * self.rng.uniform(1.0, 10.0, size=self.n)
         objective_coeffs = np.round(objective_coeffs, decimals=4)
 
         # Sort in descending order

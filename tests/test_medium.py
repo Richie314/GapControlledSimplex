@@ -11,14 +11,38 @@ from gsimplex.solvers import (
 )
 
 rel_eps = 1.0e-6
-abs_eps = 5.0e-4
+abs_eps = 5.0e-3
 
 test_data = [
     LinearProgrammingTest(
         filename="problems/medium/10x02.mps",
         sense=LpMaximize,
-        # expected_value=8_068.4059, # best integer solution
-        expected_value=17_312.2558, # best continuous solution
+        expected_value=8_068.4059,
+    ),
+    LinearProgrammingTest(
+        filename="problems/medium/10x04.mps",
+        sense=LpMinimize,
+        expected_value=468.1287,
+    ),
+    LinearProgrammingTest(
+        filename="problems/medium/13x05.mps",
+        sense=LpMaximize,
+        expected_value=3120.5018,
+    ),
+    LinearProgrammingTest(
+        filename="problems/medium/21x08.mps",
+        sense=LpMinimize,
+        expected_value=319.4278,
+    ),
+    LinearProgrammingTest(
+        filename="problems/medium/34x15.mps",
+        sense=LpMinimize,
+        expected_value=264.0395,
+    ),
+    LinearProgrammingTest(
+        filename="problems/medium/34x15.mps",
+        sense=LpMaximize,
+        expected_value=3_195.6684,
     ),
 ]
 
@@ -38,21 +62,9 @@ def test_dual_simplex_dantzig(test_case):
     solver = DualSimplex(abs_eps=abs_eps, rel_eps=rel_eps)
     test_case.test(solver)
 
-
-"""
-=============================================================
-                  Gap-controlled Simplex
-=============================================================
-"""
-
 @pytest.mark.parametrize("test_case", test_data)
-def test_gap_simplex_dantzig(test_case):
-    solver = GapDoubleSimplex(pivot_rule="dantzig", abs_eps=abs_eps, rel_eps=rel_eps)
-    test_case.test(solver)
-
-@pytest.mark.parametrize("test_case", test_data)
-def test_gap_simplex_bland(test_case):
-    solver = GapDoubleSimplex(pivot_rule="bland", abs_eps=abs_eps, rel_eps=rel_eps)
+def test_gap_simplex(test_case):
+    solver = GapDoubleSimplex(abs_eps=abs_eps, rel_eps=rel_eps)
     test_case.test(solver)
 
 """

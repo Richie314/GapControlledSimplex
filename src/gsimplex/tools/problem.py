@@ -189,7 +189,23 @@ def add_variable_constraints(lp: LpProblem) -> bool:
     if n <= lp.numConstraints():
         return True
     
-    for var in list(lp.variables()):
+    varsNeedingBounds: List[LpVariable] = []
+
+    for varIndex, var in enumerate(lp.variables()):
+        insert = True
+
+        Ai = np.zeros(n)
+        Ai[varIndex] = 1.0
+        for c in lp.constraints.values():
+            Aj, bj, slackj = constraint_to_row(c, lp)
+            if rows_are_same(Ai, Aj):
+                insert = False
+                break
+
+        if insert:
+            varsNeedingBounds.append(var)
+
+    for var in varsNeedingBounds:
         if var.lowBound is not None and math.isfinite(var.lowBound):
             lb = var.lowBound
 
@@ -197,17 +213,9 @@ def add_variable_constraints(lp: LpProblem) -> bool:
             constraint.sense = LpConstraintGE
             constraint.name = f"_LB_{var.name}"
             
-            Ai, bi, slacki = constraint_to_row(constraint, lp)
-            insert = True
-            for c in lp.constraints.values():
-                Aj, bj, slackj = constraint_to_row(c, lp)
-                if rows_are_same(Ai, Aj):
-                    insert = False
-                    break
-            
-            if insert:
-                lp += constraint
-        
+            lp += constraint
+    
+    for var in varsNeedingBounds:    
         if var.upBound is not None and math.isfinite(var.upBound):
             ub = var.upBound
 
@@ -215,15 +223,6 @@ def add_variable_constraints(lp: LpProblem) -> bool:
             constraint.sense = LpConstraintLE
             constraint.name = f"_UB_{var.name}"
 
-            Ai, bi, slacki = constraint_to_row(constraint, lp)
-            insert = True
-            for c in lp.constraints.values():
-                Aj, bj, slackj = constraint_to_row(c, lp)
-                if rows_are_same(Ai, Aj):
-                    insert = False
-                    break
-            
-            if insert:
-                lp += constraint
+            lp += constraint
 
     return n <= lp.numConstraints()

@@ -61,7 +61,7 @@ def main():
     for name, c in problem.constraints.items():
         _, _, slack = constraint_to_row(c, problem)
         emoji = "⚠️" if slack is None or slack < -DEFAULT_ABS_TOLERANCE else "✅"
-        print(f"{name} ({LpConstraintSenses[c.sense]}): {slack} {emoji}")
+        print(f"{emoji} {name} ({LpConstraintSenses[c.sense]}): {slack}")
     print()
 
     return 0 if problem.status == LpStatusOptimal else 1

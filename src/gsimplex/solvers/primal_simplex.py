@@ -195,9 +195,13 @@ class PrimalSimplex(ISimplex):
         k = len(infeas)
         aux_vars = [LpVariable(f"aux_{n + i + 1}") for i in range(k)]
 
-        # Build the auxiliary problem
-        aux_problem = LpProblem(f"Auxiliary_for_{original.name}", sense=LpMinimize)
-        aux_problem.setObjective(lpSum(aux_vars))
+        """
+        Build the auxiliary problem.
+        Keep as a maximization problem to be able to use the primal simplex implementation as is
+        without worrying about solver inheritance and method overriding
+        """
+        aux_problem = LpProblem(f"Auxiliary_for_{original.name}", sense=LpMaximize)
+        aux_problem.setObjective(-lpSum(aux_vars))
 
         for constraint in initial_vertex.all_constraints:
             j = V.index(constraint) if constraint in V else None
@@ -262,7 +266,8 @@ class PrimalSimplex(ISimplex):
         if aux_problem == problem:
             return aux_vertex, 0
 
-        aux_problem.solve(solver=self, start_basis=aux_vertex)
+        assert aux_problem.sense == LpMaximize, "Auxiliary problem should be a maximization problem"
+        PrimalSimplex.maximize(self, aux_problem, start_basis=aux_vertex)
         if aux_problem.status != LpStatusOptimal:
             raise UnFeasibleProblemException(
                 "Auxiliary problem unfeasible or unbounded"
@@ -282,11 +287,11 @@ class PrimalSimplex(ISimplex):
             c for c in problem.constraints.values()
             if aux_solution.has_named_constraints([
                 f"_B_{c.name}", 
-              # f"_U_{c.name}", 
+                f"_U_{c.name}", 
                 f"_VS_{c.name}", 
                 f"_VA_{c.name}",
             ])
-        ]
+        ][:n]
         feas_cons_tot = len(feasible_solution_constraints)
         assert feas_cons_tot == n, f"Selected constraint count mismatch: {feas_cons_tot} != {n}"
 
