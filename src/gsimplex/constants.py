@@ -3,7 +3,7 @@ from typing import Literal
 DEFAULT_ABS_TOLERANCE = 1.0e-10
 '''Default tolerance to use in comparisons between real numbers'''
 
-DEFAULT_REL_TOLERANCE = 1.0e-4
+DEFAULT_REL_TOLERANCE = 1.0e-7
 '''Default relative tolerance to use for real number comparisons'''
 
 PivotRule = Literal["dantzig", "bland"]
@@ -22,4 +22,4 @@ DEFAULT_ABS_GAP = DEFAULT_ABS_TOLERANCE
 '''Default value for the absolute gap between primal and dual point'''
 
 DEFAULT_REL_GAP = DEFAULT_REL_TOLERANCE
-'''Default value for the relative ga between primal and dual point'''
+'''Default value for the relative gap between primal and dual point'''

@@ -74,9 +74,9 @@ class MutualPrimalDualSimplex(PrimalSimplex, DualSimplex):
         if a `primal` pivot is appropriate of if a `dual` one is.
         """
 
-        score = sum([abs(p) for p in primal_slacks] + [-abs(d) for d in dual_infeas])
+        score = sum([abs(p) for p in primal_slacks] + [-(d**2) for d in dual_infeas])
 
-        return "primal" if score < 0 else "dual"
+        return "primal" if score < DEFAULT_ABS_TOLERANCE else "dual"
 
     def _conditional_iteration(self,
                                primal_infeas: List[Tuple[LpConstraint, float]], 

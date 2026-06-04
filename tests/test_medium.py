@@ -44,6 +44,26 @@ test_data = [
         sense=LpMaximize,
         expected_value=3_195.6684,
     ),
+    LinearProgrammingTest(
+        filename="problems/medium/28x21.mps",
+        sense=LpMaximize,
+        expected_value=673.5980,
+    ),
+    # LinearProgrammingTest(
+    #     filename="problems/medium/47x45.mps",
+    #     sense=LpMaximize,
+    #     expected_value=,
+    # ),
+    # LinearProgrammingTest(
+    #     filename="problems/medium/65x56.mps",
+    #     sense=LpMaximize,
+    #     expected_value=16192.0848,
+    # ),
+    # LinearProgrammingTest(
+    #     filename="problems/medium/88x73.mps",
+    #     sense=LpMaximize,
+    #     expected_value=15_370.6017,
+    # ),
 ]
 
 """
