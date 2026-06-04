@@ -139,10 +139,10 @@ class MutualPrimalDualSimplex(PrimalSimplex, DualSimplex):
 
 class MutualGapSimplex(MutualPrimalDualSimplex, GapDoubleSimplex):
     """
-    
+    Variation of the Mutual Primal-Dual Simplex algorithm
+    that exploits the gap information to speed up convergence.
+    Relies on a user-provided lower or upper bound to the optimal value.
     """
-    
-
 
     def maximize(self, 
                  problem: LpProblem, 

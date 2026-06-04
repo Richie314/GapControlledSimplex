@@ -1,7 +1,7 @@
-from pulp import LpProblem, LpMaximize, LpMinimize
+from pulp import LpProblem, LpMaximize, LpMinimize, LpContinuous
 import tempfile
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, Union
 
 from gsimplex.tools.extractor import Extractor
 from gsimplex.tools.problem import add_variable_constraints
@@ -9,28 +9,29 @@ from gsimplex.tools.problem import add_variable_constraints
 class ProblemParser:
 
     @staticmethod
-    def __load_mps_file(file_path: str|Path, sense: int) -> LpProblem:
+    def __load_mps_file(file_path: Union[str, Path], sense: int) -> LpProblem:
         """
         Load an MPS file into an LpProblem object.
 
         :param file_path: Path to the MPS file.
-        :type file_path: str|Path
+        :type file_path: Union[str, Path]
         :param sense: Optimization sense (minimize or maximize).
         :type sense: int
         :return: The loaded linear programming problem.
         :rtype: LpProblem
         """
         _, problem = LpProblem.fromMPS(str(file_path), sense=sense)
+
         add_variable_constraints(problem)
         return problem
 
     @staticmethod
-    def load_mps_from_file(file_path: str|Path, sense: int = LpMinimize) -> LpProblem:
+    def load_mps_from_file(file_path: Union[str, Path], sense: int = LpMinimize) -> LpProblem:
         """
         Load an MPS problem from a file path, handling compressed archives transparently.
 
         :param file_path: Path to the MPS file or compressed archive.
-        :type file_path: str|Path
+        :type file_path: Union[str, Path]
         :param sense: Optimization sense (minimize or maximize).
         :type sense: int
         :return: The loaded linear programming problem.

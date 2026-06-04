@@ -38,7 +38,7 @@ class LPProblemGenerator:
 
         # Bounds to variables
         if upper_bound is None:
-            upper_bound = 10.0 * (lower_bound + 1.0)
+            upper_bound = 20.0 * (lower_bound + 1.0)
         assert upper_bound > lower_bound, "upper_bound must be greater than lower_bound"
         
         self.lb = lower_bound
@@ -73,22 +73,27 @@ class LPProblemGenerator:
         ]
         return variables
     
-    def _get_support_inequalities(self, vars: List[LpVariable]) -> List[LpConstraint]:
+    def _get_support_inequalities(self, 
+                                  vars: List[LpVariable],
+                                  add_bounds_as_constraints: bool = False,
+                                  ) -> List[LpConstraint]:
         constraints = []
-        for var in vars:
-            c = LpConstraint(var >= self.lb, name=f"{var.name}_LB")
-            c.sense = LpConstraintGE
-            constraints.append(c)
 
-            c = LpConstraint(var <= self.ub, name=f"{var.name}_UB")
-            c.sense = LpConstraintLE
-            constraints.append(c)
+        if add_bounds_as_constraints:
+            for var in vars:
+                c = LpConstraint(var >= self.lb, name=f"{var.name}_LB")
+                c.sense = LpConstraintGE
+                constraints.append(c)
+
+                c = LpConstraint(var <= self.ub, name=f"{var.name}_UB")
+                c.sense = LpConstraintLE
+                constraints.append(c)
 
         alpha = self.ub - self.lb
         guard = (self.n-1) * alpha + alpha/2 + self.n*self.lb
-        constraints.append(
-            LpConstraint(lpSum(vars) <= guard, name="Guardrail constraint")
-        )
+        c = LpConstraint(lpSum(vars) <= guard, name="GuardConstraint")
+        c.sense = LpConstraintLE
+        constraints.append(c)
         return constraints
     
     def _get_initial_feasible_point(self) -> np.ndarray:
@@ -113,7 +118,10 @@ class LPProblemGenerator:
 
         return deltaA < lMax and deltaB < sMin
 
-    def generate(self, sense: Optional[int] = None) -> LpProblem:
+    def generate(self, 
+                 sense: Optional[int] = None,
+                 add_bounds_as_constraints: bool = False,
+                 ) -> LpProblem:
         """Create a feasible LP problem with diverse constraint types."""
         
         # Randomly choose optimization sense if not provided
@@ -133,7 +141,7 @@ class LPProblemGenerator:
         problem += lpDot(objective_coeffs, variables), "Objective"
 
         # Generate support inequalities (bounds to variables)
-        constraints = self._get_support_inequalities(variables)
+        constraints = self._get_support_inequalities(variables, add_bounds_as_constraints)
 
         # Build a feasible point in the interior of the bounds.
         h = self._get_initial_feasible_point()

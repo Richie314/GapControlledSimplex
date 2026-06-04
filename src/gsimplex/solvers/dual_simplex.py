@@ -249,9 +249,8 @@ class DualSimplex(ISimplex):
         """
     
         initial_constraints = get_different_constraints(problem)
-        initial_point = Vertex(problem, *initial_constraints)
         try:
+            initial_point = Vertex(problem, *initial_constraints)
             return self.phase_one_solve(problem, initial_point)
-        except GsimplexException as e:
-            # print(e)
+        except GsimplexException:
             return None, 0

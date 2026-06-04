@@ -4,7 +4,7 @@ from pulp import (
 )
 
 from gsimplex.constants import DEFAULT_ABS_TOLERANCE
-from gsimplex.solvers.primal_simplex import PrimalSimplex
+from gsimplex.solvers import GapDoubleSimplex
 
 
 def test_dual_simplex():
@@ -39,7 +39,7 @@ def test_primal_simplex_solver_solve_forwards_kwargs():
     problem.addConstraint(y >= 0)
 
     basis = list(problem.constraints.values())[:2]
-    solver = PrimalSimplex()
+    solver = GapDoubleSimplex()
 
     status = problem.solve(solver, start_basis=basis, pivot_rule="bland")
     assert status == LpSolutionOptimal

@@ -307,7 +307,6 @@ class PrimalSimplex(ISimplex):
 
         try:
             return self.get_feasible_vertex(problem)
-        except GsimplexException as e:
-            # print(e)
+        except GsimplexException:
             return None, 0
         
