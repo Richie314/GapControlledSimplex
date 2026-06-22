@@ -52,12 +52,12 @@ test_data = [
     # LinearProgrammingTest(
     #     filename="problems/medium/47x45.mps",
     #     sense=LpMaximize,
-    #     expected_value=,
+    #     expected_value=9_953.3270,
     # ),
     # LinearProgrammingTest(
     #     filename="problems/medium/65x56.mps",
     #     sense=LpMaximize,
-    #     expected_value=16192.0848,
+    #     expected_value=16_192.0848,
     # ),
     # LinearProgrammingTest(
     #     filename="problems/medium/88x73.mps",

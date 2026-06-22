@@ -57,8 +57,9 @@ This package provides three main solver implementations in `gsimplex.solvers`:
     - `rel_eps`: relative tolerance for numerical comparisons.
     - `pivot_rule`: pivot selection strategy, `"dantzig"` by default; `"bland"` to avoid cycling.
   - Additional parameters to `solve()`:
-    - `lb`: known lower bound to the objective function.
-    - `ub`: known upper bound to the objective function.
+    - `lb`: known lower bound to the objective function, in the form of value (float/int) or vector.
+    - `ub`: known upper bound to the objective function, in the form of value (float/int) or vector.
+    - Neither `lb` nor `ub` are mandatory, but at least one of them must be provided.
 
 ## Installation
 
@@ -105,6 +106,34 @@ problem.solve(solver)
 print("Optimal value:", problem.objective.value()) # 2.0
 print("Solution:", [var.varValue for var in problem.variables()]) # [1.0, 1.0]
 ```
+
+## Command-line usage
+If the package is installed, you can run the solver from the command line using:
+
+```bash
+gsimplex --problem path/to/problem.mps --solver gsimplex --sense minimize
+```
+
+Available options:
+
+- `--problem PATH` - path to the MPS problem file to solve
+- `--sense {minimize,maximize}` - optimization sense (default: `minimize`)
+- `--solver {psimplex,dsimplex,gsimplex,msimplex}` - solver algorithm to use (default: `dsimplex`)
+- `--abs-tol FLOAT` - absolute tolerance for feasibility and optimality checks
+- `--rel-tol FLOAT` - relative tolerance for numerical comparisons
+- `--pivot-type {dantzig,bland}` - pivot selection strategy for simplex iterations
+- `--abs-gap FLOAT` - absolute gap threshold for gap-controlled solvers (`gsimplex` and `msimplex`)
+- `--rel-gap FLOAT` - relative gap threshold for gap-controlled solvers (`gsimplex` and `msimplex`)
+- `--quiet` - suppress detailed output
+
+Example:
+
+```bash
+python -m gsimplex --problem example.mps --solver gsimplex --sense minimize \
+  --abs-tol 1e-8 --rel-tol 1e-10 --pivot-type bland --abs-gap 1e-8 --rel-gap 1e-10
+```
+
+This runs the selected solver with the specified tolerances and gap control settings. For non-gap solvers (`psimplex` and `dsimplex`), `--abs-gap` and `--rel-gap` are ignored.
 
 ## Generate a random LP problem
 
